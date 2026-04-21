@@ -1,0 +1,133 @@
+import { http } from "./http";
+
+export const createClientJobRequest = async (payload) => {
+  const { data } = await http.post("/api/jobs", payload);
+  return data;
+};
+
+export const getMyClientJobsRequest = async () => {
+  const { data } = await http.get("/api/jobs/my");
+  return data;
+};
+
+export const getAdminJobsRequest = async () => {
+  const { data } = await http.get("/api/jobs/admin");
+  return data;
+};
+
+export const sendAdminQuoteRequest = async (jobId, payload) => {
+  const { data } = await http.patch(`/api/jobs/admin/${jobId}/send-quote`, payload);
+  return data;
+};
+
+export const acceptClientQuoteRequest = async (jobId) => {
+  const { data } = await http.patch(`/api/jobs/${jobId}/accept-quote`);
+  return data;
+};
+
+export const markDepositPaidRequest = async (jobId) => {
+  const { data } = await http.patch(`/api/jobs/admin/${jobId}/mark-deposit-paid`);
+  return data;
+};
+
+export const reportClientBalancePaidRequest = async (jobId, payload) => {
+  const { data } = await http.patch(`/api/jobs/${jobId}/report-balance-paid`, payload);
+  return data;
+};
+
+export const raiseClientJobIssueRequest = async (jobId, payload) => {
+  const { data } = await http.patch(`/api/jobs/${jobId}/raise-issue`, payload);
+  return data;
+};
+
+export const verifyBalancePaymentRequest = async (jobId) => {
+  const { data } = await http.patch(`/api/jobs/admin/${jobId}/verify-balance-payment`);
+  return data;
+};
+
+export const assignWorkerToJobRequest = async (jobId, payload) => {
+  const { data } = await http.patch(`/api/jobs/admin/${jobId}/assign-worker`, payload);
+  return data;
+};
+
+export const adminRaiseJobIssueRequest = async (jobId, payload) => {
+  const { data } = await http.patch(`/api/jobs/admin/${jobId}/raise-issue`, payload);
+  return data;
+};
+
+export const adminResolveJobIssueRequest = async (jobId, payload) => {
+  const { data } = await http.patch(`/api/jobs/admin/${jobId}/resolve-issue`, payload);
+  return data;
+};
+
+export const adminReleaseWorkerRequest = async (jobId, payload) => {
+  const { data } = await http.patch(`/api/jobs/admin/${jobId}/release-worker`, payload);
+  return data;
+};
+
+export const finalizeWorkerReleaseRequest = async (jobId, payload) => {
+  const { data } = await http.patch(`/api/jobs/admin/${jobId}/finalize-release`, payload);
+  return data;
+};
+
+export const getAssignedWorkerJobsRequest = async () => {
+  const { data } = await http.get("/api/jobs/worker/assigned");
+  return data;
+};
+
+export const acceptWorkerJobRequest = async (jobId) => {
+  const { data } = await http.patch(`/api/jobs/worker/${jobId}/accept`);
+  return data;
+};
+
+export const declineWorkerJobRequest = async (jobId, payload) => {
+  const { data } = await http.patch(`/api/jobs/worker/${jobId}/decline`, payload);
+  return data;
+};
+
+export const markWorkerArrivedRequest = async (jobId) => {
+  const { data } = await http.patch(`/api/jobs/worker/${jobId}/arrived`);
+  return data;
+};
+export const payWorkerRequest = async (jobId, payload) => {
+  const { data } = await http.post(`/api/jobs/admin/pay-worker/${jobId}`, payload);
+  return data;
+};
+export const deferClientQuoteRequest = async (jobId, payload) => {
+  const { data } = await http.patch(`/api/jobs/${jobId}/defer-quote`, payload);
+  return data;
+};
+export const workerStartJourneyRequest = async (jobId) => {
+  const { data } = await http.patch(`/api/jobs/worker/${jobId}/enroute`);
+  return data;
+};
+
+export const workerClockInRequest = async (jobId) => {
+  const { data } = await http.patch(`/api/jobs/worker/${jobId}/start`);
+  return data;
+};
+
+export const workerCompleteJobRequest = async (jobId) => {
+  const { data } = await http.patch(`/api/jobs/worker/${jobId}/complete`);
+  return data;
+};
+
+export const updateWorkerCurrentLocationRequest = async (jobId, payload) => {
+  const { data } = await http.patch(`/api/jobs/worker/${jobId}/location`, payload);
+  return data;
+};
+
+export const requestWorkerExtraTimeRequest = async (jobId, payload) => {
+  const { data } = await http.patch(`/api/jobs/worker/${jobId}/request-extra-time`, payload);
+  return data;
+};
+
+export const respondClientExtraTimeRequest = async (jobId, payload) => {
+  const { data } = await http.patch(`/api/jobs/${jobId}/respond-extra-time`, payload);
+  return data;
+};
+
+export const respondAdminExtraTimeRequest = async (jobId, payload) => {
+  const { data } = await http.patch(`/api/jobs/admin/${jobId}/respond-extra-time`, payload);
+  return data;
+};

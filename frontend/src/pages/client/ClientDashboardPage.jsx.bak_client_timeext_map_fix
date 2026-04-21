@@ -1,0 +1,1122 @@
+import { useEffect, useMemo, useState } from "react";
+import AppShell from "../../components/layout/AppShell";
+import StatCard from "../../components/ui/StatCard";
+import StatusBadge from "../../components/ui/StatusBadge";
+import { useAuth } from "../../contexts/AuthContext";
+import {
+  createClientJobRequest,
+  getMyClientJobsRequest,
+  acceptClientQuoteRequest,
+  deferClientQuoteRequest,
+  reportClientBalancePaidRequest,
+  raiseClientJobIssueRequest
+} from "../../api/jobsApi";
+
+const initialForm = {
+  serviceCategory: "",
+  title: "",
+  description: "",
+  instructions: "",
+  avoidNotes: "",
+  budgetAmount: "",
+  isBudgetNegotiable: true,
+  expectedDurationHours: "",
+  preferredStartAt: "",
+  mustBeCompletedBy: "",
+  county: "",
+  town: "",
+  estate: "",
+  addressLine: "",
+  houseDetails: "",
+  latitude: "",
+  longitude: "",
+  googlePlaceId: "",
+  googlePinUrl: ""
+};
+
+const initialPostJobState = {
+  jobId: "",
+  paymentProofText: "",
+  rating: "5",
+  comment: "",
+  issueNotes: ""
+};
+
+function cleanText(value = "") {
+  let text = String(value ?? "");
+
+  const quickFixes = [
+    [/-|-|-/g, "•"],
+    [/Ã¢â‚¬â„¢|â€™|ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢/g, "’"],
+    [/Ã¢â‚¬Å“|Ã¢â‚¬Â|â€œ|â€/g, '"'],
+    [/Ã‚Â/g, ""],
+    [/Ãƒ/g, "Ã"],
+    [/\uFFFD/g, ""]
+  ];
+
+  for (const [pattern, replacement] of quickFixes) {
+    text = text.replace(pattern, replacement);
+  }
+
+  for (let i = 0; i < 3; i += 1) {
+    if (!/[Ã-â€™â€œâ€\u00C2]/.test(text)) break;
+
+    try {
+      const decoded = decodeURIComponent(escape(text));
+      if (decoded && decoded !== text) {
+        text = decoded;
+        continue;
+      }
+    } catch (_) {}
+
+    break;
+  }
+
+  return text
+    .replace(/-|-/g, "•")
+    .replace(/\s*•\s*/g, " • ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function formatMoney(value) {
+  return `KES ${Number(value || 0).toLocaleString()}`;
+}
+
+function formatDateTime(value) {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+  return date.toLocaleString();
+}
+
+function getVisibleBalance(job) {
+  const paymentStatus = String(job?.payment?.paymentStatus || "unpaid").toLowerCase();
+  const finalCharge = Number(job?.pricing?.finalClientChargeAmount || 0);
+  const quotedBalance = Number(job?.payment?.balanceAmount || 0);
+
+  if (paymentStatus === "paid_in_full") return 0;
+
+  if (["deposit_paid", "client_reported_balance_payment"].includes(paymentStatus)) {
+    return quotedBalance > 0 ? quotedBalance : finalCharge;
+  }
+
+  return finalCharge;
+}
+
+function getNextStep(job) {
+  const paymentStatus = job?.payment?.paymentStatus || "unpaid";
+
+  if (job?.status === "quote_pending_client") {
+    return "Admin has sent a final quote. Review it and press Accept Quote and Proceed.";
+  }
+
+  if (job?.status === "quote_accepted_ready_for_dispatch" && !job?.assignedWorker?.fullName) {
+    return "You accepted the quote. Admin is now expected to assign a worker.";
+  }
+
+  if (job?.status === "worker_accepted") {
+    return "Worker has accepted the job and is preparing to leave for your location.";
+  }
+
+  if (job?.status === "worker_en_route") {
+    return "Worker is on the way to your location.";
+  }
+
+  if (job?.status === "worker_arrived") {
+    return "Worker has arrived on site and should clock in when actual work begins.";
+  }
+
+  if (job?.status === "work_in_progress") {
+    return "Worker is currently serving you. Wait for clock out before payment confirmation.";
+  }
+
+  if (job?.status === "awaiting_admin_clearance" && paymentStatus === "client_reported_balance_payment") {
+    return "You submitted payment proof. Admin is verifying receipt before worker release.";
+  }
+
+  if (job?.status === "awaiting_admin_clearance") {
+    return "Worker has clocked out. Either pay the balance and paste the M-Pesa message, or raise an issue.";
+  }
+
+  if (job?.status === "issue_reported") {
+    return "Issue has been raised. Admin is reviewing before worker release.";
+  }
+
+  if (job?.status === "issue_resolved" && paymentStatus !== "paid_in_full") {
+    return "Issue resolved. Complete payment proof submission so admin can release the worker.";
+  }
+
+  if (job?.status === "issue_resolved" && paymentStatus === "paid_in_full") {
+    return "Issue resolved and payment is complete. Admin should release the worker.";
+  }
+
+  if (job?.status === "completed") {
+    return "This job has been completed and the worker was officially released.";
+  }
+
+  return "Follow the latest status and wait for the next platform update.";
+}
+
+function getTimeline(job) {
+  const items = [];
+  const quoteTime =
+    job?.pricing?.clientQuoteAcceptedAt
+      ? new Date(new Date(job.pricing.clientQuoteAcceptedAt).getTime() - 1000)
+      : (job?.pricing?.finalClientChargeAmount ? new Date(new Date(job.createdAt).getTime() + 1000) : null);
+
+  if (job?.createdAt) {
+    items.push({
+      label: "Job created",
+      time: job.createdAt,
+      note: cleanText(job.description || job.serviceCategory || "Job created")
+    });
+  }
+
+  if (quoteTime && Number(job?.pricing?.finalClientChargeAmount || 0) > 0) {
+    items.push({
+      label: "Admin sent final quote",
+      time: quoteTime,
+      note: cleanText(
+        `${formatMoney(job.pricing?.finalClientChargeAmount || 0)}${job?.payment?.depositAmount ? ` | Deposit ${formatMoney(job.payment.depositAmount)}` : ""}${job?.pricing?.clientQuoteNotes ? ` | ${job.pricing.clientQuoteNotes}` : ""}`
+      )
+    });
+  }
+
+  if (job?.pricing?.clientQuoteAcceptedAt) {
+    items.push({
+      label: "You accepted the quote",
+      time: job.pricing.clientQuoteAcceptedAt,
+      note: "Admin can now assign a worker"
+    });
+  }
+
+  if (job?.assignedAt) {
+    items.push({
+      label: "Worker assigned",
+      time: job.assignedAt,
+      note: cleanText(job.assignedWorker?.fullName || "Worker assigned")
+    });
+  }
+
+  if (job?.workerAcceptedAt) {
+    items.push({
+      label: "Worker accepted the assignment",
+      time: job.workerAcceptedAt,
+      note: "Worker is now committed to your job"
+    });
+  }
+
+  if (job?.enRouteAt) {
+    items.push({
+      label: "Worker left for site",
+      time: job.enRouteAt,
+      note: "Journey to your location started"
+    });
+  }
+
+  if (job?.arrivedAt) {
+    items.push({
+      label: "Worker arrived",
+      time: job.arrivedAt,
+      note: "Worker reached your site"
+    });
+  }
+
+  if (job?.startedAt) {
+    items.push({
+      label: "Work started",
+      time: job.startedAt,
+      note: "Worker clocked in"
+    });
+  }
+
+  if (job?.completedAt) {
+    items.push({
+      label: "Work completed on site",
+      time: job.completedAt,
+      note: "Client payment confirmation or issue action is required"
+    });
+  }
+
+  const paymentTime = job?.payment?.adminPaymentVerifiedAt || job?.payment?.clientReportedBalancePaidAt || job?.payment?.balancePaidAt;
+  if (paymentTime) {
+    items.push({
+      label: "Service balance payment",
+      time: paymentTime,
+      note: cleanText(job?.payment?.clientPaymentProofText || "Balance payment recorded")
+    });
+  }
+
+  if (job?.releasedAt) {
+    items.push({
+      label: "Worker released",
+      time: job.releasedAt,
+      note: "Job closed successfully"
+    });
+  }
+
+  return items
+    .filter((item) => item.time)
+    .sort((a, b) => new Date(a.time) - new Date(b.time));
+}
+
+export default function ClientDashboardPage() {
+  const { user, profile, handleAccountDeletion } = useAuth();
+  const [form, setForm] = useState(initialForm);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deleteReason, setDeleteReason] = useState("");
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+
+  const sidebarExtra = (
+    <button
+      type="button"
+      onClick={() => {
+        setDeletePassword("");
+        setDeleteReason("");
+        setShowDeleteModal(true);
+      }}
+      style={{
+        width: "100%",
+        padding: "12px 14px",
+        borderRadius: "14px",
+        background: "linear-gradient(135deg, rgba(239,68,68,0.16) 0%, rgba(255,255,255,0.04) 100%)",
+        border: "1px solid rgba(248,113,113,0.30)",
+        color: "#fecaca",
+        fontWeight: 800,
+        letterSpacing: "0.01em"
+      }}
+    >
+      Deactivate My Account
+    </button>
+                        
+  );
+
+  const [jobs, setJobs] = useState([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [actingJobId, setActingJobId] = useState("");
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [message, setMessage] = useState("");
+  const [postJob, setPostJob] = useState(initialPostJobState);
+  const [showDeferQuoteModal, setShowDeferQuoteModal] = useState(false);
+  const [deferQuoteJob, setDeferQuoteJob] = useState(null);
+  const [deferQuoteReason, setDeferQuoteReason] = useState("");
+
+  const loadJobs = async () => {
+    try {
+      const response = await getMyClientJobsRequest();
+      setJobs(response.data || []);
+    } catch (err) {
+      setError(err?.response?.data?.message || "Failed to load your jobs.");
+    }
+  };
+
+  useEffect(() => {
+    loadJobs();
+  }, []);
+
+  useEffect(() => {
+    setForm((current) => ({
+      ...current
+    }));
+  }, [profile]);
+
+  const stats = useMemo(() => {
+    return {
+      awaitingDecision: jobs.filter((job) => job.status === "quote_pending_client").length,
+      awaitingPostJobAction: jobs.filter((job) => job.status === "awaiting_admin_clearance").length
+    };
+  }, [jobs]);
+
+  const handleChange = (event) => {
+    const { name, value, type, checked } = event.target;
+    setForm((current) => ({
+      ...current,
+      [name]: type === "checkbox" ? checked : value
+    }));
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setError("");
+    setSuccess("");
+    setMessage("");
+    setIsSubmitting(true);
+
+    try {
+      const generatedTitle =
+        form.title?.trim() ||
+        `${form.serviceCategory.replace(/_/g, " ")} - ${form.estate || form.town || "Client Request"}`;
+
+      await createClientJobRequest({
+        ...form,
+        title: generatedTitle,
+        budgetAmount: Number(form.budgetAmount),
+        expectedDurationHours: Number(form.expectedDurationHours),
+        preferredStartAt: new Date(form.preferredStartAt).toISOString(),
+        mustBeCompletedBy: form.mustBeCompletedBy ? new Date(form.mustBeCompletedBy).toISOString() : null,
+        latitude: form.latitude ? Number(form.latitude) : null,
+        longitude: form.longitude ? Number(form.longitude) : null,
+        photoUrls: []
+      });
+
+      setMessage("Job created successfully.");
+      setForm((current) => ({
+        ...initialForm,
+        estate: current.estate,
+        addressLine: current.addressLine,
+        houseDetails: current.houseDetails,
+        latitude: current.latitude,
+        longitude: current.longitude,
+        googlePinUrl: current.googlePinUrl
+      }));
+      await loadJobs();
+    } catch (err) {
+      setError(err?.response?.data?.message || "Failed to create job.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleAcceptQuote = async (jobId) => {
+    setError("");
+    setSuccess("");
+
+    try {
+      await acceptClientQuoteRequest(jobId);
+      setSuccess("Quote accepted successfully.");
+      await loadJobs();
+    } catch (err) {
+      setError(err?.response?.data?.message || "Failed to accept quote.");
+    }
+  };
+
+  const handleReportBalancePaid = async (jobId) => {
+    setError("");
+    setSuccess("");
+    setActingJobId(jobId);
+
+    try {
+      await reportClientBalancePaidRequest(jobId, {
+        paymentProofText: postJob.paymentProofText,
+        rating: Number(postJob.rating || 0),
+        comment: postJob.comment
+      });
+      setSuccess("Balance payment proof submitted. Admin will verify then release the worker.");
+      setPostJob(initialPostJobState);
+      await loadJobs();
+    } catch (err) {
+      setError(err?.response?.data?.message || "Failed to submit payment proof.");
+    } finally {
+      setActingJobId("");
+    }
+  };
+
+
+  const handleRespondExtraTime = async (jobId, status) => {
+    setActingJobId(jobId);
+    setError("");
+    setSuccessMessage("");
+
+    try {
+      await http.patch(`/api/jobs/client/${jobId}/respond-extra-time`, {
+        status,
+        note:
+          status === "approved"
+            ? "Approved additional time to allow proper completion."
+            : "Declined extra time. Please complete within agreed scope."
+      });
+
+      setSuccessMessage(
+        status === "approved"
+          ? "Extra time approved successfully."
+          : "Extra time request declined."
+      );
+
+      await loadDashboard();
+    } catch (err) {
+      setError(err?.response?.data?.message || "Failed to respond to extra time.");
+    } finally {
+      setActingJobId("");
+    }
+  };
+
+  const handleRaiseIssue = async (jobId) => {
+    setError("");
+    setSuccess("");
+    setActingJobId(jobId);
+
+    try {
+      await raiseClientJobIssueRequest(jobId, {
+        issueNotes: postJob.issueNotes,
+        rating: Number(postJob.rating || 0),
+        comment: postJob.comment
+      });
+      setSuccess("Issue raised successfully. Admin will review before worker release.");
+      setPostJob(initialPostJobState);
+      await loadJobs();
+    } catch (err) {
+      setError(err?.response?.data?.message || "Failed to raise issue.");
+    } finally {
+      setActingJobId("");
+    }
+  };
+
+
+  const handleDeferQuote = async () => {
+    if (!deferQuoteJob?._id) {
+      setError("No quote selected for defer.");
+      return;
+    }
+
+    if (!String(deferQuoteReason || "").trim()) {
+      setError("Please write a reason before deferring the quote.");
+      return;
+    }
+
+    setError("");
+    setSuccess("");
+    setActingJobId(deferQuoteJob._id);
+
+    try {
+      await deferClientQuoteRequest(deferQuoteJob._id, {
+        reason: String(deferQuoteReason).trim()
+      });
+      setSuccess("Quote deferred successfully. Admin can now renegotiate and resend.");
+      setShowDeferQuoteModal(false);
+      setDeferQuoteJob(null);
+      setDeferQuoteReason("");
+      await loadJobs();
+    } catch (err) {
+      setError(err?.response?.data?.message || "Failed to defer quote.");
+    } finally {
+      setActingJobId("");
+    }
+  };
+  return (
+    <AppShell
+      title="Client Dashboard"
+      subtitle="Create requests, review final quotes, track worker progress, and complete the post-job payment or issue flow clearly."
+    >
+      {error ? <div className="error-banner">{error}</div> : null}
+      {success ? <div className="success-banner">{success}</div> : null}
+      {message ? <div className="success-banner">{message}</div> : null}
+
+      <div className="stats-grid">
+        <StatCard label="Client" value={cleanText(user?.fullName || "Client")} hint="Signed-in account" />
+        <StatCard label="Estate" value={cleanText(profile?.defaultLocation?.estate || "Not set")} hint="Default area" />
+        <StatCard label="My Jobs" value={jobs.length} hint="Recorded service requests" />
+        <StatCard label="Awaiting Quote Decision" value={stats.awaitingDecision} hint="Quotes needing your action" />
+        <StatCard label="Awaiting Payment / Issue Action" value={stats.awaitingPostJobAction} hint="Post-job steps needing your action" />
+      </div>
+
+      <div className="dashboard-grid">
+        <div className="glass-card section-card" style={{ background: "linear-gradient(145deg, rgba(15,23,42,0.98) 0%, rgba(30,41,59,0.96) 55%, rgba(8,145,178,0.14) 100%)", border: "1px solid rgba(125,211,252,0.18)", boxShadow: "0 18px 45px rgba(2,6,23,0.28)" }}>
+          <h3>Create New Job</h3>
+
+          <form className="form-grid" onSubmit={handleSubmit}>
+            <label className="field" style={{ display: "block", color: "#0f172a" }}>
+              <span>Service Category</span>
+              <select name="serviceCategory" value={form.serviceCategory} onChange={handleChange}>
+                <option value="">Select service category</option>
+                <option value="studio_bedsitter_cleaning">Studio / Bedsitter Cleaning</option>
+                <option value="one_bedroom_cleaning">1 Bedroom House Cleaning</option>
+                <option value="two_bedroom_cleaning">2 Bedroom House Cleaning</option>
+                <option value="three_plus_bedroom_cleaning">3+ Bedroom House Cleaning</option>
+                <option value="kitchen_deep_cleaning">Kitchen Deep Cleaning</option>
+                <option value="bathroom_deep_cleaning">Bathroom Deep Cleaning</option>
+                <option value="sofa_upholstery_cleaning">Sofa / Upholstery Cleaning</option>
+                <option value="mattress_cleaning">Mattress Cleaning</option>
+                <option value="carpet_rug_cleaning">Carpet / Rug Cleaning</option>
+                <option value="balcony_outdoor_cleaning">Balcony / Outdoor Cleaning</option>
+                <option value="laundry_washing">Laundry Washing</option>
+                <option value="laundry_washing_ironing">Laundry Washing + Ironing</option>
+                <option value="utensils_dishes_cleaning">Utensils / Dishes Cleaning</option>
+                <option value="move_in_move_out_cleaning">Move-in / Move-out Cleaning</option>
+                <option value="after_event_cleaning">After-event Cleaning</option>
+                <option value="office_cleaning">Office Cleaning</option>
+                <option value="grocery_pickup">Grocery Pickup</option>
+                <option value="parcel_delivery">Parcel Delivery</option>
+                <option value="pharmacy_pickup">Pharmacy Pickup</option>
+                <option value="house_supplies_purchase">House Supplies Purchase</option>
+                <option value="queue_bill_payment_errand">Queue / Bill Payment Errand</option>
+                <option value="document_dropoff_pickup">Document Drop-off / Pickup</option>
+                <option value="delivery_transportation">Delivery Transportation</option>
+                <option value="movers_services">Movers Services</option>
+                <option value="custom_errand">Custom Errand</option>
+                <option value="salon_services">Salon Services</option>
+                <option value="barber_services">Barber Services</option>
+                <option value="babysitting_services">Babysitting Services</option>
+                <option value="pet_care_services">Pet Care Services</option>
+                <option value="plumbing_services">Plumbing Services</option>
+                <option value="electrical_services">Electrical Services</option>
+                <option value="pest_control_services">Pest Control Services</option>
+                <option value="car_wash_services">Car Wash Services</option>
+              </select>
+            </label>
+
+            <label className="field field-span-2">
+              <span>Job Title</span>
+              <input name="title" value={form.title} onChange={handleChange} placeholder="Optional - auto-generated if left blank" />
+            </label>
+
+            <label className="field field-span-2">
+              <span>Description</span>
+              <textarea name="description" value={form.description} onChange={handleChange} rows="4" />
+            </label>
+
+            <label className="field" style={{ display: "block", color: "#0f172a" }}>
+              <span>Budget (KES)</span>
+              <input name="budgetAmount" type="number" value={form.budgetAmount} onChange={handleChange} />
+            </label>
+
+            <label className="field" style={{ display: "block", color: "#0f172a" }}>
+              <span>Expected Duration (hours)</span>
+              <input name="expectedDurationHours" type="number" step="0.5" value={form.expectedDurationHours} onChange={handleChange} />
+            </label>
+
+            <label className="field" style={{ display: "block", color: "#0f172a" }}>
+              <span>Preferred Start</span>
+              <input name="preferredStartAt" type="datetime-local" value={form.preferredStartAt} onChange={handleChange} />
+            </label>
+
+            <label className="field" style={{ display: "block", color: "#0f172a" }}>
+              <span>Must Finish By</span>
+              <input name="mustBeCompletedBy" type="datetime-local" value={form.mustBeCompletedBy} onChange={handleChange} />
+            </label>
+
+            <label className="field field-span-2">
+              <span>Instructions</span>
+              <textarea name="instructions" value={form.instructions} onChange={handleChange} rows="3" />
+            </label>
+
+            <label className="field field-span-2">
+              <span>Avoid Notes</span>
+              <textarea name="avoidNotes" value={form.avoidNotes} onChange={handleChange} rows="3" />
+            </label>
+
+            <label className="field" style={{ display: "block", color: "#0f172a" }}>
+              <span>Estate</span>
+              <input name="estate" value={form.estate} onChange={handleChange} />
+            </label>
+
+            <label className="field" style={{ display: "block", color: "#0f172a" }}>
+              <span>Address</span>
+              <input name="addressLine" value={form.addressLine} onChange={handleChange} />
+            </label>
+
+            <label className="field field-span-2">
+              <span>House Details</span>
+              <input name="houseDetails" value={form.houseDetails} onChange={handleChange} />
+            </label>
+
+            <label className="field field-span-2">
+              <span>Google Map Pin URL</span>
+              <input
+                name="googlePinUrl"
+                value={form.googlePinUrl}
+                onChange={handleChange}
+                placeholder="Paste the Google Maps pinned job-site URL"
+              />
+            </label>
+
+            <label className="check-field field-span-2">
+              <input
+                type="checkbox"
+                name="isBudgetNegotiable"
+                checked={form.isBudgetNegotiable}
+                onChange={handleChange}
+              />
+              <span>Budget is negotiable</span>
+            </label>
+
+            <button type="submit" className="primary-button field-span-2" disabled={isSubmitting}>
+              {isSubmitting ? "Creating..." : "Create Job"}
+            </button>
+          </form>
+        </div>
+
+        <div className="glass-card section-card" style={{ background: "linear-gradient(145deg, rgba(15,23,42,0.98) 0%, rgba(30,41,59,0.96) 55%, rgba(8,145,178,0.14) 100%)", border: "1px solid rgba(125,211,252,0.18)", boxShadow: "0 18px 45px rgba(2,6,23,0.28)" }}>
+          <div className="section-head">
+            <div>
+              <h3 style={{ fontSize: "1.45rem", color: "#f8fafc", marginBottom: "8px", letterSpacing: "0.01em" }}>My Jobs</h3>
+              <p>Follow every service clearly from quote, worker arrival, work progress, payment confirmation, and final closure.</p>
+            </div>
+            <button className="ghost-button" onClick={loadJobs}>Refresh</button>
+          </div>
+
+          <div className="card-stack">
+            {jobs.length === 0 ? (
+              <p>No jobs created yet.</p>
+            ) : (
+              jobs.map((job) => {
+                const paymentStatus = job.payment?.paymentStatus || "unpaid";
+                const visibleBalance = getVisibleBalance(job);
+                const extraTimeStatus = String(job?.timeExtension?.status || "").toLowerCase();
+                const hasPendingExtraTime = ["pending", "pending_client", "requested"].includes(extraTimeStatus);
+                const hasApprovedExtraTime = extraTimeStatus === "approved";
+                const hasRejectedExtraTime = ["rejected", "declined", "deferred"].includes(extraTimeStatus);
+                const timeline = getTimeline(job);
+                const nextStep = getNextStep(job);
+
+              
+  const handleDeferQuote = async () => {
+    if (!deferQuoteJob?._id) {
+      setError("No quote selected for defer.");
+      return;
+    }
+
+    if (!String(deferQuoteReason || "").trim()) {
+      setError("Please write a reason before deferring the quote.");
+      return;
+    }
+
+    setError("");
+    setSuccess("");
+    setActingJobId(deferQuoteJob._id);
+
+    try {
+      await deferClientQuoteRequest(deferQuoteJob._id, {
+        reason: String(deferQuoteReason).trim()
+      });
+      setSuccess("Quote deferred successfully. Admin can now renegotiate and resend.");
+      setShowDeferQuoteModal(false);
+      setDeferQuoteJob(null);
+      setDeferQuoteReason("");
+      await loadJobs();
+    } catch (err) {
+      setError(err?.response?.data?.message || "Failed to defer quote.");
+    } finally {
+      setActingJobId("");
+    }
+  };
+  return (
+                  <div className="glass-subcard" key={job._id} style={{ background: "linear-gradient(155deg, rgba(30,41,59,0.99) 0%, rgba(71,85,105,0.88) 58%, rgba(14,165,233,0.10) 100%)", border: "1px solid rgba(125,211,252,0.18)", boxShadow: "0 18px 42px rgba(2,6,23,0.24)", borderRadius: "24px", padding: "24px" }}>
+                    <div className="job-head">
+                      <div>
+                        <h4 style={{ fontSize: "1.42rem", color: "#ffffff", letterSpacing: "0.01em", marginBottom: "10px", textShadow: "0 8px 20px rgba(15,23,42,0.24)" }}>{cleanText(job.title)}</h4>
+                        <p>{`${cleanText(job.location?.estate || "-")} - Budget ${formatMoney(job.budgetAmount)}`}</p>
+                      </div>
+                      <div className="badge-row">
+                        <StatusBadge value={job.status} />
+                        <StatusBadge value={job.assignmentStatus} />
+                        <StatusBadge value={paymentStatus} />
+                      </div>
+                    </div>
+
+                    <div className="details-grid" style={{ rowGap: "14px", columnGap: "20px", alignItems: "start" }}>
+                      <div><strong style={{ color: "#bfdbfe" }}>Final Quote:</strong> <span style={{ color: "#f8fafc", fontWeight: 800 }}>{formatMoney(job.pricing?.finalClientChargeAmount || 0)}</span></div>
+                      <div><strong style={{ color: "#a7f3d0" }}>Deposit:</strong> <span style={{ color: "#ecfdf5", fontWeight: 800 }}>{formatMoney(job.payment?.depositAmount || 0)}</span></div>
+                      <div><strong style={{ color: "#fde68a" }}>Balance:</strong> <span style={{ color: "#fff7ed", fontWeight: 800 }}>{formatMoney(visibleBalance)}</span></div>
+                      <div><strong style={{ color: "#c4b5fd" }}>Worker:</strong> <span style={{ color: "#f5f3ff", fontWeight: 700 }}>{cleanText(job.assignedWorker?.fullName || "Not assigned yet")}</span></div>
+                      <div><strong style={{ color: "#f9a8d4" }}>Client Quote Notes:</strong> <span style={{ color: "#fce7f3" }}>{cleanText(job.pricing?.clientQuoteNotes || "-")}</span></div>
+                      <div><strong style={{ color: "#67e8f9" }}>Payment Proof:</strong> <span style={{ color: "#cffafe" }}>{cleanText(job.payment?.clientPaymentProofText || "-")}</span></div>
+                    </div>
+
+                    <div className="decline-reason-box" style={{ background: "linear-gradient(135deg, rgba(15,23,42,0.58) 0%, rgba(30,41,59,0.38) 100%)", border: "1px solid rgba(125,211,252,0.16)", boxShadow: "0 12px 28px rgba(2,6,23,0.16)" }}>
+                      <strong style={{ color: "#bae6fd", letterSpacing: "0.01em" }}>Next Step</strong>
+                      <p style={{ color: "#e2e8f0", lineHeight: 1.75 }}>{nextStep}</p>
+                    </div>
+
+                    <p className="muted-copy">{cleanText(job.description || "")}</p>
+
+                    {(() => {
+                      const trackingOpen = ["worker_accepted", "worker_en_route", "worker_arrived", "work_in_progress", "awaiting_admin_clearance", "issue_reported", "issue_resolved"].includes(job.status) && !job.releasedAt && job.status !== "completed" && job.assignmentStatus !== "released";
+                      const liveLatitude = Number(job?.currentLocation?.latitude);
+                      const liveLongitude = Number(job?.currentLocation?.longitude);
+                      const hasLiveLocation = Number.isFinite(liveLatitude) && Number.isFinite(liveLongitude);
+                      const hasPinnedMap = Boolean(String(job?.location?.googlePinUrl || "").trim());
+                      const mapUrl = hasLiveLocation
+                        ? `https://www.google.com/maps/search/?api=1&query=${liveLatitude},${liveLongitude}`
+                        : (job?.location?.googlePinUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([job?.location?.addressLine, job?.location?.estate, job?.location?.town, job?.location?.county].filter(Boolean).join(", "))}`);
+
+                      return (
+                        <div className="glass-card section-card" style={{ marginTop: 18, padding: 18, background: "linear-gradient(155deg, rgba(51,65,85,0.72) 0%, rgba(71,85,105,0.54) 100%)", border: "1px solid rgba(148,163,184,0.16)", borderRadius: "20px", marginBottom: "18px" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", gap: "10px", alignItems: "flex-start", flexWrap: "wrap" }}>
+                            <div>
+                              <h4 style={{ marginBottom: 8, color: "#f8fafc", fontSize: "1.08rem" }}>Map Tracking</h4>
+                              <p style={{ color: "#dbe7f5", lineHeight: 1.7, margin: 0 }}>
+                                This map is available only during the valid assignment period so you can trust worker movement and site direction.
+                              </p>
+                            </div>
+
+                            <button
+                              className="ghost-button"
+                              disabled={!trackingOpen}
+                              onClick={() => {
+                                if (!trackingOpen) return;
+                                window.open(mapUrl, "_blank", "noopener,noreferrer");
+                              }}
+                            >
+                              {trackingOpen ? "Open Map" : "Map Locked"}
+                            </button>
+                          </div>
+
+                          {!trackingOpen ? (
+                            <div style={{ marginTop: "12px", color: "#fca5a5", fontWeight: 700 }}>
+                              Map tracking is forbidden outside the valid assignment period.
+                            </div>
+                          ) : (
+                            <div>
+                              <div style={{ marginTop: "12px", color: hasLiveLocation ? "#22c55e" : (hasPinnedMap ? "#93c5fd" : "#86efac"), fontWeight: 700 }}>
+                                {hasLiveLocation
+                                  ? `Map source: live worker location sync${job?.currentLocation?.lastUpdatedAt ? ` (updated ${formatDateTime(job.currentLocation.lastUpdatedAt)})` : ""}.`
+                                  : (hasPinnedMap ? "Map source: exact client pinned Google Map URL." : "Map tracking is open during this live assignment period.")}
+                              </div>
+                              <div style={{ marginTop: "8px", color: hasPinnedMap ? "#93c5fd" : "#fcd34d", fontWeight: 700 }}>
+                                {hasPinnedMap ? "Map source: exact client pinned Google Map URL." : "Map source: fallback typed address search. Fresh jobs with a pasted pin will use the exact pinned site."}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
+
+                    <div className="glass-card section-card" style={{ marginTop: 18, padding: 18, background: "linear-gradient(155deg, rgba(51,65,85,0.72) 0%, rgba(71,85,105,0.54) 100%)", border: "1px solid rgba(148,163,184,0.16)", borderRadius: "20px" }}>
+                      <h4 style={{ marginBottom: 12, color: "#f8fafc", fontSize: "1.08rem" }}>Job History</h4>
+                      {hasPendingExtraTime ? (
+                        <div
+                          style={{
+                            marginBottom: "14px",
+                            padding: "14px 16px",
+                            borderRadius: "14px",
+                            background: "#fff7ed",
+                            border: "1px solid #fdba74"
+                          }}
+                        >
+                          <div style={{ fontWeight: 700, marginBottom: "6px", color: "#9a3412" }}>
+                            Worker Requested Additional Time
+                          </div>
+                          <div style={{ color: "#7c2d12", lineHeight: 1.7 }}>
+                            Requested: {Number(job?.timeExtension?.requestedMinutes || 0)} minutes<br />
+                            Reason: {job?.timeExtension?.reason || "-"}
+                          </div>
+                          <div style={{ display: "flex", gap: "10px", marginTop: "12px", flexWrap: "wrap" }}>
+                            <button
+                              className="primary-button"
+                              onClick={() => handleRespondExtraTime(job._id, "approved")}
+                              disabled={actingJobId === job._id}
+                            >
+                              Approve Time
+                            </button>
+                            <button
+                              className="ghost-button"
+                              onClick={() => handleRespondExtraTime(job._id, "rejected")}
+                              disabled={actingJobId === job._id}
+                            >
+                              Decline Request
+                            </button>
+                          </div>
+                        </div>
+                      ) : null}
+
+                      {hasApprovedExtraTime ? (
+                        <div
+                          style={{
+                            marginBottom: "14px",
+                            padding: "12px 14px",
+                            borderRadius: "12px",
+                            background: "rgba(16,185,129,0.12)",
+                            border: "1px solid rgba(16,185,129,0.3)",
+                            color: "#065f46",
+                            fontWeight: 700
+                          }}
+                        >
+                          Extra time approved: {Number(job?.timeExtension?.approvedMinutes || 0)} minutes
+                        </div>
+                      ) : null}
+
+                      {hasRejectedExtraTime ? (
+                        <div
+                          style={{
+                            marginBottom: "14px",
+                            padding: "12px 14px",
+                            borderRadius: "12px",
+                            background: "rgba(239,68,68,0.12)",
+                            border: "1px solid rgba(239,68,68,0.3)",
+                            color: "#7f1d1d",
+                            fontWeight: 700
+                          }}
+                        >
+                          Extra time request declined
+                        </div>
+                      ) : null}
+
+                      <div className="card-stack" style={{ gap: 10 }}>
+                        {timeline.map((item, index) => (
+                          <div key={`${job._id}-timeline-${index}`} style={{ padding: "14px 16px", borderRadius: "16px", background: "linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(148,163,184,0.04) 100%)", border: "1px solid rgba(255,255,255,0.10)", boxShadow: "0 10px 22px rgba(2,6,23,0.10)" }}>
+                            <div style={{ fontWeight: 700 }}>{item.label}</div>
+                            <div style={{ color: "#93c5fd", marginTop: 4 }}>{formatDateTime(item.time)}</div>
+                            <div style={{ color: "#dbe7f5", marginTop: 6 }}>{item.note}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {job.status === "quote_pending_client" ? (
+                      <div className="action-row" style={{ marginTop: 16 }}>
+                        <button className="primary-button" onClick={() => handleAcceptQuote(job._id)}>
+                          Accept Quote and Proceed
+                        </button>
+
+                        <button
+                          className="ghost-button"
+                          onClick={() => {
+                            setDeferQuoteJob(job);
+                            setDeferQuoteReason("");
+                            setShowDeferQuoteModal(true);
+                          }}
+                        >
+                          Defer Offer
+                        </button>
+                      </div>
+                    ) : null}
+
+                    {job.status === "awaiting_admin_clearance" ? (
+                      <div className="form-grid top-gap" style={{ marginTop: 18 }}>
+                        <label className="field field-span-2">
+                          <span>M-Pesa Payment Message</span>
+                          <textarea
+                            rows="4"
+                            placeholder="Paste the exact M-Pesa confirmation message after paying the balance."
+                            value={postJob.jobId === job._id ? postJob.paymentProofText : ""}
+                            onChange={(e) =>
+                              setPostJob((current) => ({
+                                ...current,
+                                jobId: job._id,
+                                paymentProofText: e.target.value
+                              }))
+                            }
+                          />
+                        </label>
+
+                        <label className="field">
+                          <span>Rate Worker (1-5)</span>
+                          <select
+                            value={postJob.jobId === job._id ? postJob.rating : "5"}
+                            onChange={(e) =>
+                              setPostJob((current) => ({
+                                ...current,
+                                jobId: job._id,
+                                rating: e.target.value
+                              }))
+                            }
+                          >
+                            <option value="5">5 - Excellent</option>
+                            <option value="4">4 - Good</option>
+                            <option value="3">3 - Fair</option>
+                            <option value="2">2 - Poor</option>
+                            <option value="1">1 - Very Poor</option>
+                          </select>
+                        </label>
+
+                        <label className="field">
+                          <span>Rate / Comment Worker Service</span>
+                          <input
+                            value={postJob.jobId === job._id ? postJob.comment : ""}
+                            onChange={(e) =>
+                              setPostJob((current) => ({
+                                ...current,
+                                jobId: job._id,
+                                comment: e.target.value
+                              }))
+                            }
+                            placeholder="Say how the service was"
+                          />
+                        </label>
+
+                        <label className="field field-span-2">
+                          <span>Raise Issue</span>
+                          <textarea
+                            rows="3"
+                            placeholder="Describe the issue clearly if there is any problem."
+                            value={postJob.jobId === job._id ? postJob.issueNotes : ""}
+                            onChange={(e) =>
+                              setPostJob((current) => ({
+                                ...current,
+                                jobId: job._id,
+                                issueNotes: e.target.value
+                              }))
+                            }
+                          />
+                        </label>
+
+                        <div className="action-row field-span-2">
+                          <button
+                            className="primary-button"
+                            disabled={actingJobId === job._id}
+                            onClick={() => handleReportBalancePaid(job._id)}
+                          >
+                            {actingJobId === job._id ? "Submitting..." : "Bal Paid In Full"}
+                          </button>
+
+                          <button
+                            className="ghost-button"
+                            disabled={actingJobId === job._id}
+                            onClick={() => handleRaiseIssue(job._id)}
+                          >
+                            Raise Issue
+                          </button>
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+      </div>
+
+      {showDeleteModal ? (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0, 0, 0, 0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999, padding: "16px" }}>
+          <div className="glass-card section-card" style={{ width: "100%", maxWidth: "460px", background: "#ffffff", color: "#111827", borderRadius: "20px", padding: "28px", boxShadow: "0 30px 80px rgba(0,0,0,0.35)", border: "1px solid rgba(15,23,42,0.08)" }}>
+            <h3 style={{ marginTop: 0, color: "#ff4d4f" }}>Confirm Account Deactivation</h3>
+            <p style={{ marginBottom: "16px", color: "#475569", lineHeight: 1.6 }}>
+              This action will deactivate your account immediately and log you out. Your reason will help admin understand service gaps, quality concerns, or account-related frustrations.
+            </p>
+
+            <label className="field" style={{ display: "block", color: "#0f172a" }}>
+              <span style={{ display: "block", color: "#334155", fontWeight: 700, marginBottom: "8px" }}>Password</span>
+              <input type="password" value={deletePassword} onChange={(event) => setDeletePassword(event.target.value)} placeholder="Enter your password" style={{ width: "100%", marginTop: "8px", background: "#f8fafc", color: "#0f172a", border: "1px solid #cbd5e1", borderRadius: "12px", padding: "14px 16px", outline: "none" }} />
+            </label>
+
+            <label className="field" style={{ display: "block", marginTop: "12px", color: "#0f172a" }}>
+              <span style={{ display: "block", color: "#334155", fontWeight: 700, marginBottom: "8px" }}>Reason</span>
+              <textarea rows="4" value={deleteReason} onChange={(event) => setDeleteReason(event.target.value)} placeholder="Tell us why you are leaving" style={{ width: "100%", marginTop: "8px", background: "#f8fafc", color: "#0f172a", border: "1px solid #cbd5e1", borderRadius: "12px", padding: "14px 16px", outline: "none", resize: "vertical" }} />
+            </label>
+
+            <div style={{ display: "flex", gap: "12px", marginTop: "22px", flexWrap: "wrap" }}>
+              <button
+                type="button"
+                className="primary-button"
+                style={{ background: "linear-gradient(135deg, #ff5a5f 0%, #ef4444 100%)", border: "none", color: "#ffffff", borderRadius: "12px", padding: "12px 18px", fontWeight: 700, boxShadow: "0 14px 30px rgba(239,68,68,0.28)" }}
+                disabled={isDeletingAccount}
+                onClick={async () => {
+                  if (!deletePassword.trim() || !deleteReason.trim()) {
+                    alert("Password and reason are required.");
+                    return;
+                  }
+
+                  try {
+                    setIsDeletingAccount(true);
+                    await handleAccountDeletion(deletePassword, deleteReason);
+                  } catch (deleteError) {
+                    alert(deleteError?.response?.data?.message || "Failed to deactivate account.");
+                  } finally {
+                    setIsDeletingAccount(false);
+                  }
+                }}
+              >
+                {isDeletingAccount ? "Deleting..." : "Confirm Deactivation"}
+              </button>
+
+              <button
+                type="button"
+                className="secondary-button"
+                disabled={isDeletingAccount}
+                style={{ background: "#eef2f7", border: "1px solid #cbd5e1", color: "#0f172a", borderRadius: "12px", padding: "12px 18px", fontWeight: 600 }}
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setDeletePassword("");
+                  setDeleteReason("");
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {showDeferQuoteModal && deferQuoteJob ? (
+        <div
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999, padding: "16px" }}
+          onClick={() => {
+            setShowDeferQuoteModal(false);
+            setDeferQuoteJob(null);
+            setDeferQuoteReason("");
+          }}
+        >
+          <div
+            className="glass-card section-card"
+            style={{ width: "100%", maxWidth: "560px", background: "#ffffff", color: "#111827", borderRadius: "20px", padding: "28px", boxShadow: "0 30px 80px rgba(0,0,0,0.35)", position: "relative" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => {
+                setShowDeferQuoteModal(false);
+                setDeferQuoteJob(null);
+                setDeferQuoteReason("");
+              }}
+              style={{
+                position: "absolute",
+                top: "16px",
+                right: "16px",
+                border: "1px solid #cbd5e1",
+                background: "#f8fafc",
+                color: "#0f172a",
+                borderRadius: "12px",
+                padding: "8px 14px",
+                fontWeight: 700,
+                cursor: "pointer"
+              }}
+            >
+              Close
+            </button>
+
+            <h3 style={{ marginTop: 0, color: "#0f172a", paddingRight: "90px" }}>Why are you deferring this quote?</h3>
+            <p style={{ marginBottom: "16px", color: "#475569", lineHeight: 1.6 }}>
+              Tell admin what needs adjustment so a better agreed quote can be resent.
+            </p>
+
+            <label className="field" style={{ display: "block", color: "#0f172a" }}>
+              <span style={{ display: "block", color: "#334155", fontWeight: 700, marginBottom: "8px" }}>Deferral Reason</span>
+              <textarea
+                rows="4"
+                value={deferQuoteReason}
+                onChange={(e) => setDeferQuoteReason(e.target.value)}
+                placeholder="Example: I need a lower final quote, different deposit terms, or revised scope"
+                style={{ width: "100%", background: "#f8fafc", color: "#0f172a", border: "1px solid #cbd5e1", borderRadius: "12px", padding: "14px 16px", resize: "vertical" }}
+              />
+            </label>
+
+            <div style={{ display: "flex", gap: "12px", marginTop: "22px", flexWrap: "wrap" }}>
+              <button
+                type="button"
+                className="primary-button"
+                disabled={actingJobId === deferQuoteJob._id}
+                onClick={handleDeferQuote}
+              >
+                {actingJobId === deferQuoteJob._id ? "Submitting..." : "Submit Deferral"}
+              </button>
+
+              <button
+                type="button"
+                className="ghost-button"
+                style={{
+                  background: "#e2e8f0",
+                  color: "#0f172a",
+                  border: "1px solid #cbd5e1",
+                  fontWeight: 700
+                }}
+                onClick={() => {
+                  setShowDeferQuoteModal(false);
+                  setDeferQuoteJob(null);
+                  setDeferQuoteReason("");
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </AppShell>
+  );
+}
+
+
