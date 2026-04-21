@@ -1305,8 +1305,8 @@ export default function ClientDashboardPage() {
 
   return (
     <AppShell
-      title=""
-      subtitle=""
+      title={null}
+      subtitle={null}
       sidebarExtra={sidebarExtra}
       hideSidebarLogoutButton
     >
@@ -1398,7 +1398,7 @@ export default function ClientDashboardPage() {
         className="dashboard-grid"
         style={{
           display: "grid",
-          gridTemplateColumns: "minmax(0, 1.08fr) minmax(0, 0.92fr)",
+          gridTemplateColumns: "minmax(0, 1fr)",
           gap: "22px",
           alignItems: "start"
         }}
@@ -1409,7 +1409,7 @@ export default function ClientDashboardPage() {
             style={{
               background: "linear-gradient(145deg, rgba(15,23,42,0.98) 0%, rgba(30,41,59,0.96) 55%, rgba(8,145,178,0.14) 100%)",
               border: "1px solid rgba(125,211,252,0.18)",
-              boxShadow: "0 18px 45px rgba(2,6,23,0.28)",
+              boxShadow: "0 18px 45px rgba(2,6,23,0.28)", width: "100%", minWidth: 0,
               height: "fit-content",
               minHeight: "unset",
               alignSelf: "start"
@@ -1544,7 +1544,7 @@ export default function ClientDashboardPage() {
             style={{
               background: "linear-gradient(145deg, rgba(15,23,42,0.98) 0%, rgba(30,41,59,0.96) 55%, rgba(8,145,178,0.14) 100%)",
               border: "1px solid rgba(125,211,252,0.18)",
-              boxShadow: "0 18px 45px rgba(2,6,23,0.28)"
+              boxShadow: "0 18px 45px rgba(2,6,23,0.28)", width: "100%", minWidth: 0
             }}
           >
             <div className="section-head">
@@ -1571,9 +1571,7 @@ export default function ClientDashboardPage() {
           style={{
             background: "linear-gradient(145deg, rgba(15,23,42,0.98) 0%, rgba(30,41,59,0.96) 55%, rgba(8,145,178,0.14) 100%)",
             border: "1px solid rgba(125,211,252,0.18)",
-            boxShadow: "0 18px 45px rgba(2,6,23,0.28)",
-            minWidth: 0,
-            overflow: "hidden"
+            boxShadow: "0 18px 45px rgba(2,6,23,0.28)", width: "100%", minWidth: 0, overflow: "hidden"
           }}
         >
           <div className="section-head">
@@ -1942,5 +1940,6 @@ export default function ClientDashboardPage() {
     </AppShell>
   );
 }
+
 
 
