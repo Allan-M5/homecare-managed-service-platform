@@ -1377,11 +1377,20 @@ export default function AdminDashboardPage() {
   nextOfKinPhone: "",
   nextOfKinRelationship: "",
   neighborFriendContact: "",
+  emergencyContactName: "",
+  emergencyContactPhone: "",
+  emergencyContactRelationship: "",
   experienceSummary: "",
+  nationalIdNumber: "",
+  serviceCategories: [],
+  yearsOfExperience: "",
   canBringOwnSupplies: "",
   preferredWorkRadiusKm: "",
   mpesaNumber: "",
   mpesaRegisteredName: "",
+  bankName: "",
+  bankAccountName: "",
+  bankAccountNumber: "",
   bankAccountDetails: "",
   adminNotes: ""
 });
@@ -1837,7 +1846,7 @@ const resetModal = () => {
     if (type === "override_worker_profile") {
   const app = payload?.applicationRecord || {};
   const profile = payload?.profile || {};
-  const home = profile?.homeLocation || {};
+  const home = profile?.homeLocation || app?.homeLocation || {};
 
   setOverrideForm({
     fullName: payload?.fullName || "",
@@ -1847,16 +1856,21 @@ const resetModal = () => {
     town: home?.town || app?.town || "",
     estate: home?.estate || app?.estate || "",
     addressLine: home?.addressLine || app?.addressLine || "",
-    houseDetails: "",
+    houseDetails: home?.houseDetails || profile?.houseDetails || app?.houseDetails || "",
     googleMapPinUrl: home?.googlePinUrl || app?.homeLocation?.googlePinUrl || app?.googleMapPinUrl || app?.locationPinUrl || "",
     nextOfKinName: profile?.nextOfKinName || app?.nextOfKinName || "",
     nextOfKinPhone: profile?.nextOfKinPhone || app?.nextOfKinPhone || "",
     nextOfKinRelationship: profile?.nextOfKinRelationship || app?.nextOfKinRelationship || "",
     neighborFriendContact: profile?.neighborFriendContact || app?.neighborFriendContact || "",
+    emergencyContactName: profile?.emergencyContactName || app?.emergencyContactName || "",
+    emergencyContactPhone: profile?.emergencyContactPhone || app?.emergencyContactPhone || "",
+    emergencyContactRelationship: profile?.emergencyContactRelationship || app?.emergencyContactRelationship || "",
     experienceSummary: profile?.experienceSummary || app?.experienceSummary || "",
-        nationalIdNumber: profile?.nationalIdNumber || app?.nationalIdNumber || "",
-        serviceCategories: profile?.serviceCategories || app?.serviceCategories || [],
-        yearsOfExperience: profile?.yearsOfExperience || app?.yearsOfExperience || 0,
+    nationalIdNumber: profile?.nationalIdNumber || app?.nationalIdNumber || "",
+    serviceCategories: Array.isArray(profile?.serviceCategories)
+      ? profile.serviceCategories
+      : (Array.isArray(app?.serviceCategories) ? app.serviceCategories : []),
+    yearsOfExperience: String(profile?.yearsOfExperience || app?.yearsOfExperience || ""),
     canBringOwnSupplies:
       profile?.canBringOwnSupplies === true ? "yes" :
       profile?.canBringOwnSupplies === false ? "no" :
@@ -1864,6 +1878,9 @@ const resetModal = () => {
     preferredWorkRadiusKm: String(profile?.preferredWorkRadiusKm || app?.preferredWorkRadiusKm || ""),
     mpesaNumber: profile?.mpesaNumber || app?.mpesaNumber || "",
     mpesaRegisteredName: profile?.mpesaRegisteredName || app?.mpesaRegisteredName || "",
+    bankName: profile?.bankName || app?.bankName || "",
+    bankAccountName: profile?.bankAccountName || app?.bankAccountName || "",
+    bankAccountNumber: profile?.bankAccountNumber || app?.bankAccountNumber || "",
     bankAccountDetails: profile?.bankAccountDetails || app?.bankAccountDetails || "",
     adminNotes: ""
   });
@@ -1878,7 +1895,7 @@ const resetModal = () => {
         town: location?.town || "",
         estate: location?.estate || "",
         addressLine: location?.addressLine || "",
-        houseDetails: location?.houseDetails || "",
+        houseDetails: location?.houseDetails || payload?.profile?.houseDetails || "",
         googleMapPinUrl: location?.googlePinUrl || payload?.profile?.googlePinUrl || payload?.googlePinUrl || payload?.locationPinUrl || "",
         nextOfKinName: "",
         nextOfKinPhone: "",
@@ -2125,22 +2142,29 @@ const resetModal = () => {
     town: String(overrideForm.town || "").trim(),
     estate: String(overrideForm.estate || "").trim(),
     addressLine: String(overrideForm.addressLine || "").trim(),
+    houseDetails: String(overrideForm.houseDetails || "").trim(),
     googleMapPinUrl: String(overrideForm.googleMapPinUrl || "").trim(),
     googlePinUrl: String(overrideForm.googleMapPinUrl || "").trim(),
     nextOfKinName: String(overrideForm.nextOfKinName || "").trim(),
     nextOfKinPhone: String(overrideForm.nextOfKinPhone || "").trim(),
     nextOfKinRelationship: String(overrideForm.nextOfKinRelationship || "").trim(),
     neighborFriendContact: String(overrideForm.neighborFriendContact || "").trim(),
+    emergencyContactName: String(overrideForm.emergencyContactName || "").trim(),
+    emergencyContactPhone: String(overrideForm.emergencyContactPhone || "").trim(),
+    emergencyContactRelationship: String(overrideForm.emergencyContactRelationship || "").trim(),
     experienceSummary: String(overrideForm.experienceSummary || "").trim(),
     nationalIdNumber: String(overrideForm.nationalIdNumber || "").trim(),
     serviceCategories: Array.isArray(overrideForm.serviceCategories)
       ? overrideForm.serviceCategories
-      : String(overrideForm.serviceCategories || "").split(",").map(s => s.trim()).filter(Boolean),
+      : String(overrideForm.serviceCategories || "").split(",").map((s) => s.trim()).filter(Boolean),
     yearsOfExperience: Number(overrideForm.yearsOfExperience || 0),
     canBringOwnSupplies: String(overrideForm.canBringOwnSupplies || "").trim(),
     preferredWorkRadiusKm: String(overrideForm.preferredWorkRadiusKm || "").trim(),
     mpesaNumber: String(overrideForm.mpesaNumber || "").trim(),
     mpesaRegisteredName: String(overrideForm.mpesaRegisteredName || "").trim(),
+    bankName: String(overrideForm.bankName || "").trim(),
+    bankAccountName: String(overrideForm.bankAccountName || "").trim(),
+    bankAccountNumber: String(overrideForm.bankAccountNumber || "").trim(),
     bankAccountDetails: String(overrideForm.bankAccountDetails || "").trim(),
     adminNotes: String(overrideForm.adminNotes || "").trim(),
     reason: String(overrideForm.adminNotes || "").trim()
@@ -2915,7 +2939,7 @@ const submitApplicationReview = async (decision) => {
               <button
                 key={value}
                 type="button"
-                onClick={() => { if (value === "super_admin_management") { if (!isSuperAdmin) return; setSuperAdminPanelUnlocked(false); setAdminView("dashboard"); setModalForm((prev) => ({ ...prev, password: "" })); setModalState({ type: "unlock_super_admin_panel", open: true, payload: null }); return; } setAdminView(value); }}
+                onClick={() => { if (value === "super_admin_management") { if (!isSuperAdmin) return; setSuperAdminPanelUnlocked(false); setAdminView("super_admin_management"); setModalForm((prev) => ({ ...prev, password: "" })); setModalState({ type: "unlock_super_admin_panel", open: true, payload: null }); return; } setAdminView(value); }}
                 style={{
                   width: "100%",
                   textAlign: "left",
@@ -3718,7 +3742,7 @@ const submitApplicationReview = async (decision) => {
             ["Personal Details", `Phone: ${cleanText(worker.phone || "-")} | Email: ${cleanText(worker.email || "-")} | Last Login: ${formatDateTime(worker.lastLoginAt)}`, "#60a5fa", false],
             ["Availability & Work Preferences", `Availability: ${formatAvailabilityWindow(worker.profile)} | Work Radius: ${cleanText(worker.profile?.preferredWorkRadiusKm || "-")} KM | Can Bring Supplies: ${String(worker.profile?.canBringOwnSupplies) === "true" || worker.profile?.canBringOwnSupplies === true ? "Yes" : "No / Depends"}`, "#86efac", false],
             ["Submitted Uploads", renderWorkerUploads(worker), "#f9a8d4"],
-            ["Audit Trail", `Suspended At: ${formatDateTime(worker.suspendedAt)} | Suspend Reason: ${cleanText(worker.suspendedReason || worker.profile?.suspensionReason || "-")} | Reactivated At: ${formatDateTime(worker.reactivatedAt)} | Reactivation Note: ${cleanText(worker.reactivationNote || "-")} | Deleted At: ${formatDateTime(worker.deletedAt)} | Deletion Reason: ${cleanText(worker.deletionReason || "-")}`, "#22d3ee", false],
+            ["Audit Trail", `Suspended At: ${formatDateTime(worker.suspendedAt)} | Suspend Reason: ${cleanText(worker.suspendedReason || worker.profile?.suspensionReason || "-")} | Reactivated At: ${formatDateTime(worker.reactivatedAt)} | Reactivation Note: ${cleanText(worker.reactivationNote || "-")} | Deactivated At: ${formatDateTime(worker.deletedAt)} | Deactivation Reason: ${cleanText(worker.deletionReason || "-")}`, "#22d3ee", false],
             ["Admin Activity", `Last Updated: ${formatDateTime(worker.updatedAt || worker.profile?.updatedAt)} | Notes: ${cleanText(worker.profile?.adminNotes || worker.profile?.notesForAdmin || "-")}`, "#facc15", false],
           ];
 
@@ -3965,7 +3989,7 @@ const submitApplicationReview = async (decision) => {
                   ["Address", cleanText(location.addressLine || "-"), "#c4b5fd"],
                   ["House Details", cleanText(location.houseDetails || "-"), "#fdba74"],
                   ["Saved Pin Location", cleanText(location.googlePinUrl || client?.profile?.googlePinUrl || client?.googlePinUrl || client?.locationPinUrl || "-"), "#93c5fd"],
-                  ["Profile Audit", `Suspended At: ${formatDateTime(client.suspendedAt)} | Suspend Reason: ${cleanText(client.suspendedReason || "-")} | Deleted At: ${formatDateTime(client.deletedAt)} | Deletion Reason: ${cleanText(client.deletionReason || "-")}`, "#22d3ee"],
+                  ["Profile Audit", `Suspended At: ${formatDateTime(client.suspendedAt)} | Suspend Reason: ${cleanText(client.suspendedReason || "-")} | Deactivated At: ${formatDateTime(client.deletedAt)} | Deactivation Reason: ${cleanText(client.deletionReason || "-")}`, "#22d3ee"],
 ["Admin Activity",
 `Last Updated: ${formatDateTime(client.updatedAt || client.profile?.updatedAt)} | Notes: ${cleanText(client.profile?.adminNotes || client.profile?.notesForAdmin || "-")}`,
 "#facc15"]
@@ -4088,7 +4112,7 @@ const submitApplicationReview = async (decision) => {
                       <strong>Last Login:</strong> {formatDateTime(worker.lastLoginAt)}
                     </div>
                     <div style={{ color: "#22d3ee", marginTop: "8px", lineHeight: 1.7 }}>
-                      <strong>Profile Audit:</strong> Suspended At: {formatDateTime(worker.suspendedAt)} | Suspend Reason: {cleanText(worker.suspendedReason || "-")} | Reactivated At: {formatDateTime(worker.reactivatedAt)} | Reactivation Note: {cleanText(worker.reactivationNote || "-")} | Deleted At: {formatDateTime(worker.deletedAt)} | Deletion Reason: {cleanText(worker.deletionReason || "-")}
+                      <strong>Profile Audit:</strong> Suspended At: {formatDateTime(worker.suspendedAt)} | Suspend Reason: {cleanText(worker.suspendedReason || "-")} | Reactivated At: {formatDateTime(worker.reactivatedAt)} | Reactivation Note: {cleanText(worker.reactivationNote || "-")} | Deactivated At: {formatDateTime(worker.deletedAt)} | Deactivation Reason: {cleanText(worker.deletionReason || "-")}
                     </div>
                     <div className="action-row" style={{ marginTop: "12px", flexWrap: "wrap" }}>
                       <button
@@ -4150,7 +4174,7 @@ const submitApplicationReview = async (decision) => {
                       <strong>Last Login:</strong> {formatDateTime(client.lastLoginAt)}
                     </div>
                     <div style={{ color: "#22d3ee", marginTop: "8px", lineHeight: 1.7 }}>
-                      <strong>Profile Audit:</strong> Suspended At: {formatDateTime(client.suspendedAt)} | Suspend Reason: {cleanText(client.suspendedReason || "-")} | Deleted At: {formatDateTime(client.deletedAt)} | Deletion Reason: {cleanText(client.deletionReason || "-")}
+                      <strong>Profile Audit:</strong> Suspended At: {formatDateTime(client.suspendedAt)} | Suspend Reason: {cleanText(client.suspendedReason || "-")} | Deactivated At: {formatDateTime(client.deletedAt)} | Deactivation Reason: {cleanText(client.deletionReason || "-")}
                     </div>
                     <div className="action-row" style={{ marginTop: "12px", flexWrap: "wrap" }}>
                       <button
@@ -4182,12 +4206,15 @@ const submitApplicationReview = async (decision) => {
         >
           <h3 style={{ margin: 0, marginBottom: "6px" }}>Deactivated Workers</h3>
           <p style={{ margin: 0, color: "#cbd5e1", lineHeight: 1.55 }}>
-            Deleted or deactivated worker accounts will appear here with the deletion reason and timestamp.
+            Deactivated worker accounts appear here with timing, reason, audit trail, and reactivation control.
           </p>
 
           <div style={{ marginTop: "12px" }}>
             {visibleDeactivatedWorkersList.length === 0 ? (
-              <EmptyState title="No deactivated workers yet" text="Deleted or deactivated worker accounts will appear here with the deletion reason and timestamp." />
+              <EmptyState
+                title="No deactivated workers yet"
+                text="Deactivated worker accounts appear here with timing, reason, audit trail, and reactivation control."
+              />
             ) : (
               <div className="card-stack" style={{ gap: "10px" }}>
                 {visibleDeactivatedWorkersList.map((worker) => (
@@ -4195,14 +4222,25 @@ const submitApplicationReview = async (decision) => {
                     <div style={{ fontSize: "1.12rem", fontWeight: 900, color: "#f8fafc" }}>{cleanText(worker.fullName || "-")}</div>
                     <div style={{ color: "#cbd5e1", marginTop: "6px" }}>{cleanText(worker.phone || "-")}</div>
                     <div style={{ color: "#cbd5e1", marginTop: "6px" }}>{cleanText(worker.email || "-")}</div>
-                    <div style={{ color: "#cbd5e1", marginTop: "8px" }}><strong>Deleted At:</strong> {formatDateTime(worker.deletedAt)}</div>
                     <div style={{ color: "#fda4af", marginTop: "8px", fontWeight: 800 }}>
-                      Reason: {cleanText(worker.deletionReason || "-")}
+                      Status: {cleanText(worker.currentAccountState || worker.accountStatus || "deactivated")}
                     </div>
-                    <div className="action-row" style={{ marginTop: "12px", flexWrap: "wrap" }}>
+                    <div style={{ color: "#cbd5e1", marginTop: "8px" }}>
+                      <strong>Deactivated At:</strong> {formatDateTime(worker.deletedAt)}
+                    </div>
+                    <div style={{ color: "#cbd5e1", marginTop: "8px" }}>
+                      <strong>Last Login:</strong> {formatDateTime(worker.lastLoginAt)}
+                    </div>
+                    <div style={{ color: "#fecaca", marginTop: "8px", fontWeight: 800 }}>
+                      Deactivation Reason: {cleanText(worker.deletionReason || "-")}
+                    </div>
+                    <div style={{ color: "#22d3ee", marginTop: "8px", lineHeight: 1.7 }}>
+                      <strong>Profile Audit:</strong> Suspended At: {formatDateTime(worker.suspendedAt)} | Suspend Reason: {cleanText(worker.suspendedReason || "-")} | Reactivated At: {formatDateTime(worker.reactivatedAt)} | Reactivation Reason: {cleanText(worker.reactivationNote || "-")} | Deactivated At: {formatDateTime(worker.deletedAt)} | Deactivation Reason: {cleanText(worker.deletionReason || "-")}
+                    </div>
+                    <div className="action-row" style={{ marginTop: "12px", flexWrap: "wrap", gap: "10px" }}>
                       <button
                         className="primary-button"
-                        style={{ background: SUCCESS_GREEN, borderColor: SUCCESS_GREEN, color: "#052e16" }}
+                        style={{ background: SUCCESS_GREEN, borderColor: SUCCESS_GREEN, color: "#052e16", minWidth: "172px" }}
                         onClick={() => openAdminModal("reactivate_worker", worker, { resolutionNote: "" })}
                       >
                         Reactivate Worker
@@ -4213,7 +4251,9 @@ const submitApplicationReview = async (decision) => {
               </div>
             )}
           </div>
-        </div>) : null}
+        </div>
+      ) : null}
+
 
 {adminView === "deactivated_clients" ? (
         <div
@@ -4230,25 +4270,55 @@ const submitApplicationReview = async (decision) => {
         >
           <h3 style={{ margin: 0, marginBottom: "6px" }}>Deactivated Clients</h3>
           <p style={{ margin: 0, color: "#cbd5e1", lineHeight: 1.55 }}>
-            Deleted or deactivated client accounts will appear here with the deletion reason and timestamp.
+            Deactivated client accounts appear here with timing, reason, audit trail, and reactivation control.
           </p>
 
           <div style={{ marginTop: "12px" }}>
             {visibleDeactivatedClientsList.length === 0 ? (
-              <EmptyState title="No deactivated clients yet" text="Deleted or deactivated client accounts will appear here with the deletion reason and timestamp." />
+              <EmptyState
+                title="No deactivated clients yet"
+                text="Deactivated client accounts appear here with timing, reason, audit trail, and reactivation control."
+              />
             ) : (
-<div className="card-stack" style={{ gap: "10px" }}>
+              <div className="card-stack" style={{ gap: "10px" }}>
                 {visibleDeactivatedClientsList.map((client) => (
                   <div key={client._id} className="glass-subcard" style={{ padding: "16px 18px", borderRadius: "18px" }}>
-                    <div style={{ fontSize: "1.12rem", fontWeight: 900, color: "#f8fafc" }}>{cleanText(client.fullName || "-")}</div><div style={{ color: "#cbd5e1", marginTop: "6px" }}>{cleanText(client.phone || "-")}</div><div style={{ color: "#cbd5e1", marginTop: "8px" }}><strong>Deleted At:</strong> {formatDateTime(client.deletedAt)}</div><div style={{ color: "#fcd34d", marginTop: "8px", fontWeight: 800 }}>
-                      Reason: {cleanText(client.deletionReason || "-")}</div><div className="action-row" style={{ marginTop: "12px", flexWrap: "wrap" }}>
+                    <div style={{ fontSize: "1.12rem", fontWeight: 900, color: "#f8fafc" }}>{cleanText(client.fullName || "-")}</div>
+                    <div style={{ color: "#cbd5e1", marginTop: "6px" }}>{cleanText(client.phone || "-")}</div>
+                    <div style={{ color: "#cbd5e1", marginTop: "6px" }}>{cleanText(client.email || "-")}</div>
+                    <div style={{ color: "#fda4af", marginTop: "8px", fontWeight: 800 }}>
+                      Status: {cleanText(client.currentAccountState || client.accountStatus || "deactivated")}
+                    </div>
+                    <div style={{ color: "#cbd5e1", marginTop: "8px" }}>
+                      <strong>Deactivated At:</strong> {formatDateTime(client.deletedAt)}
+                    </div>
+                    <div style={{ color: "#cbd5e1", marginTop: "8px" }}>
+                      <strong>Last Login:</strong> {formatDateTime(client.lastLoginAt)}
+                    </div>
+                    <div style={{ color: "#fecaca", marginTop: "8px", fontWeight: 800 }}>
+                      Deactivation Reason: {cleanText(client.deletionReason || "-")}
+                    </div>
+                    <div style={{ color: "#22d3ee", marginTop: "8px", lineHeight: 1.7 }}>
+                      <strong>Profile Audit:</strong> Suspended At: {formatDateTime(client.suspendedAt)} | Suspend Reason: {cleanText(client.suspendedReason || "-")} | Reactivated At: {formatDateTime(client.reactivatedAt)} | Reactivation Reason: {cleanText(client.reactivationNote || "-")} | Deactivated At: {formatDateTime(client.deletedAt)} | Deactivation Reason: {cleanText(client.deletionReason || "-")}
+                    </div>
+                    <div className="action-row" style={{ marginTop: "12px", flexWrap: "wrap", gap: "10px" }}>
                       <button
                         className="primary-button"
-                        style={{ background: SUCCESS_GREEN, borderColor: SUCCESS_GREEN, color: "#052e16" }}
+                        style={{ background: SUCCESS_GREEN, borderColor: SUCCESS_GREEN, color: "#052e16", minWidth: "172px" }}
                         onClick={() => openAdminModal("reactivate_client", client, { resolutionNote: "" })}
                       >
                         Reactivate Client
-                      </button></div></div>))}</div>)}</div></div>) : null}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      ) : null}
+
+
 {adminView === "notification_center" ? (
         <div
           className="glass-card section-card"

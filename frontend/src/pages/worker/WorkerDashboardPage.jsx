@@ -389,6 +389,8 @@ export default function WorkerDashboardPage() {
   const [showResetPasswordModal, setShowResetPasswordModal] = useState(false);
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
   const [showProfilePhotoModal, setShowProfilePhotoModal] = useState(false);
+  const [profileGalleryIndex, setProfileGalleryIndex] = useState(0);
+  const [profileViewerZoom, setProfileViewerZoom] = useState(1);
   const [profileForm, setProfileForm] = useState({
     fullName: "",
     phone: "",
@@ -922,6 +924,13 @@ mpesaNumber: String(profileForm.mpesaNumber || "").trim(),
     workerApplication?.nationalIdBack?.fileName,
     workerApplication?.selfieWithId?.fileName
   ].filter(Boolean).join(" | ");
+  const profileGalleryItems = [
+    workerApplication?.profilePhoto?.url,
+    workerApplication?.nationalIdFront?.url,
+    workerApplication?.nationalIdBack?.url,
+    workerApplication?.selfieWithId?.url
+  ].filter(Boolean);
+
   const latestProfileAudit = Array.isArray(dashboard?.profile?.profileAuditTrail) && dashboard.profile.profileAuditTrail.length
     ? dashboard.profile.profileAuditTrail[dashboard.profile.profileAuditTrail.length - 1]
     : null;
@@ -1081,7 +1090,7 @@ profilePhotoDisplay: {
               type="button"
               className="glass-subcard"
               onClick={() => {
-                if (workerProfilePhoto) setShowProfilePhotoModal(true);
+                if (workerProfilePhoto) { setProfileGalleryIndex(0); setProfileViewerZoom(1); setShowProfilePhotoModal(true); }
               }}
               style={{
                 padding: "14px",
@@ -2082,10 +2091,92 @@ profilePhotoDisplay: {
         </div>
       ) : null}
 
+      {showProfilePhotoModal ? (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(2,6,23,0.82)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "18px",
+            zIndex: 9999
+          }}
+          onClick={() => setShowProfilePhotoModal(false)}
+        >
+          <div
+            className="glass-card section-card"
+            style={{ width: "100%", maxWidth: "980px", padding: "18px", borderRadius: "24px" }}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "10px", marginBottom: "14px", flexWrap: "wrap" }}>
+              <h3 style={{ margin: 0, color: "#f8fafc" }}>Worker Image Viewer</h3>
+              <div className="action-row" style={{ gap: "10px", flexWrap: "wrap" }}>
+                <button className="ghost-button" type="button" onClick={() => setProfileViewerZoom((current) => Math.max(0.7, Number((current - 0.2).toFixed(2))))}>Zoom Out</button>
+                <button className="ghost-button" type="button" onClick={() => setProfileViewerZoom(1)}>Reset Zoom</button>
+                <button className="ghost-button" type="button" onClick={() => setProfileViewerZoom((current) => Math.min(3, Number((current + 0.2).toFixed(2))))}>Zoom In</button>
+                <button className="ghost-button" type="button" onClick={() => setShowProfilePhotoModal(false)}>Close</button>
+              </div>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "88px minmax(0, 1fr) 88px", gap: "12px", alignItems: "center" }}>
+              <button
+                type="button"
+                className="ghost-button"
+                disabled={profileGalleryItems.length <= 1}
+                onClick={() => setProfileGalleryIndex((current) => (current - 1 + profileGalleryItems.length) % profileGalleryItems.length)}
+              >
+                Prev
+              </button>
+
+              <div
+                style={{
+                  minHeight: "62vh",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  overflow: "hidden",
+                  borderRadius: "18px",
+                  background: "rgba(15,23,42,0.82)",
+                  border: "1px solid rgba(148,163,184,0.18)"
+                }}
+              >
+                <img
+                  src={profileGalleryItems[profileGalleryIndex] || workerProfilePhoto}
+                  alt="Worker upload preview"
+                  style={{
+                    maxWidth: "100%",
+                    maxHeight: "62vh",
+                    objectFit: "contain",
+                    transform: `scale(${profileViewerZoom})`,
+                    transformOrigin: "center center",
+                    display: "block"
+                  }}
+                />
+              </div>
+
+              <button
+                type="button"
+                className="ghost-button"
+                disabled={profileGalleryItems.length <= 1}
+                onClick={() => setProfileGalleryIndex((current) => (current + 1) % profileGalleryItems.length)}
+              >
+                Next
+              </button>
+            </div>
+
+            <div style={{ marginTop: "12px", color: "#cbd5e1", fontWeight: 700 }}>
+              Image {profileGalleryItems.length ? profileGalleryIndex + 1 : 1} of {profileGalleryItems.length || 1}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {showDeleteModal ? (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999 }}>
           <div style={{ width: "100%", maxWidth: "460px", background: "#ffffff", padding: "28px", borderRadius: "20px" }}>
-            <h3 style={{ color: "#ef4444" }}>Confirm Account Deletion</h3>
+            <h3 style={{ color: "#ef4444" }}>Confirm Account Deactivation</h3>
 
             <span style={{ color: "#334155", fontWeight: 600 }}>Password</span>
             <input type="password" value={deletePassword} onChange={(e) => setDeletePassword(e.target.value)} style={{ width: "100%", marginTop: "8px" }} />
@@ -2110,7 +2201,7 @@ profilePhotoDisplay: {
                   }
                 }}
               >
-                {isDeletingAccount ? "Deleting..." : "Confirm Delete"}
+                {isDeletingAccount ? "Deactivating..." : "Confirm Delete"}
               </button>
 
               <button onClick={() => setShowDeleteModal(false)} disabled={isDeletingAccount}>Cancel</button>
