@@ -500,6 +500,22 @@ function renderUploadLine(label, file) {
   return `${label}: ${fileName} | ${url}`;
 }
 
+function isAdminOperatorActive(admin = {}) {
+  const explicit = admin?.isActive;
+  const accountState = String(admin?.currentAccountState || admin?.accountStatus || "").trim().toLowerCase();
+
+  if (["deactivated", "deleted", "inactive", "suspended"].includes(accountState)) {
+    return false;
+  }
+
+  if (typeof explicit === "boolean") {
+    return explicit;
+  }
+
+  const explicitText = String(explicit ?? "").trim().toLowerCase();
+  return !["false", "0", "no", "inactive", "deactivated", "deleted"].includes(explicitText);
+}
+
 function formatDateTime(value) {
   if (!value) return "-";
   const date = new Date(value);
@@ -2106,6 +2122,7 @@ const resetModal = () => {
       });
       setSuccess("Admin account deactivated successfully.");
       resetModal();
+      await load({ silent: true });
       await loadAdminAccounts({ silent: false });
     } catch (err) {
       setError(err?.response?.data?.message || "Failed to deactivate admin account.");
@@ -2135,6 +2152,7 @@ const resetModal = () => {
       });
       setSuccess("Admin account reactivated successfully.");
       resetModal();
+      await load({ silent: true });
       await loadAdminAccounts({ silent: false });
     } catch (err) {
       setError(err?.response?.data?.message || "Failed to reactivate admin account.");
@@ -4653,8 +4671,8 @@ Please check your dashboard for the latest instructions.`
                       <div style={{ color: "#f8fafc", fontWeight: 900, fontSize: "1.08rem" }}>{cleanText(admin.fullName || admin.name || "Admin Operator")}</div>
                       <div style={{ color: "#cbd5e1", marginTop: "6px" }}>{cleanText(admin.phone || "-")}</div>
                       <div style={{ color: "#cbd5e1", marginTop: "4px" }}>{cleanText(admin.email || "-")}</div>
-                      <div style={{ color: String(admin.isActive) === "false" ? "#fca5a5" : "#86efac", fontWeight: 800, marginTop: "8px" }}>
-                        Status: {String(admin.isActive) === "false" ? "deactivated" : "active"}
+                      <div style={{ color: isAdminOperatorActive(admin) ? "#86efac" : "#fca5a5", fontWeight: 800, marginTop: "8px" }}>
+                        Status: {isAdminOperatorActive(admin) ? "active" : "deactivated"}
                       </div>
                       <div
                         style={{
@@ -4667,7 +4685,7 @@ Please check your dashboard for the latest instructions.`
                       >
                         <div style={{ color: "#22d3ee", fontWeight: 800, marginBottom: "6px" }}>Admin Audit Log</div>
                         <div style={{ color: "#f8fafc", lineHeight: 1.75 }}>
-                          {`Created: ${formatDateTime(admin?.createdAt)} | Updated: ${formatDateTime(admin?.updatedAt)} | Last Password Reset: ${formatDateTime(admin?.lastPasswordResetAt || admin?.passwordResetAt)} | Deactivated At: ${formatDateTime(admin?.deactivatedAt || admin?.deletedAt)} | Deactivation Reason: ${cleanText(admin?.deactivationReason || admin?.reason || "-")} | Reactivated At: ${formatDateTime(admin?.reactivatedAt)} | Reactivation Note: ${cleanText(admin?.reactivationNote || admin?.note || "-")}`}
+                          {`Created: ${formatDateTime(admin?.createdAt)} | Updated: ${formatDateTime(admin?.updatedAt)} | Last Password Reset: ${formatDateTime(admin?.lastPasswordResetAt || admin?.passwordResetAt)} | Deactivated At: ${formatDateTime(admin?.deactivatedAt || admin?.deletedAt || admin?.disabledAt)} | Deactivation Reason: ${cleanText(admin?.deactivationReason || admin?.disabledReason || admin?.reason || "-")} | Reactivated At: ${formatDateTime(admin?.reactivatedAt || admin?.restoredAt)} | Reactivation Note: ${cleanText(admin?.reactivationNote || admin?.restoredNote || admin?.note || "-")}`}
                         </div>
                       </div>
                     </div>
@@ -4683,7 +4701,7 @@ Please check your dashboard for the latest instructions.`
                         Reset Password
                       </button>
 
-                      {String(admin.isActive) === "false" ? (
+                      {!isAdminOperatorActive(admin) ? (
                         <button
                           className="primary-button admin-action-button"
                           style={{ background: "#22c55e", borderColor: "#22c55e", color: "#052e16" }}
