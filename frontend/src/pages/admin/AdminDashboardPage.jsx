@@ -342,6 +342,13 @@ function cleanText(value = "") {
     .trim() || "-";
 }
 
+function cleanDisplayText(value = "") {
+  return cleanText(value)
+    .replace(/([A-Za-z]{2,})'(?=[A-Za-z]{2,})/g, "$1 ")
+    .replace(/\s+/g, " ")
+    .trim() || "-";
+}
+
 function formatMoney(value) {
   return `KES ${Number(value || 0).toLocaleString()}`;
 }
@@ -2774,7 +2781,7 @@ const submitApplicationReview = async (decision) => {
     jobs.filter((job) => job.status === "pending_review").forEach((job) => {
       items.push({
         id: `quote-${job._id}`,
-        title: `${cleanText(job.title || "Job")} is waiting for final quote`,
+        title: `${cleanDisplayText(job.title || "Job")} is waiting for final quote`,
         detail: `Admin should send the final quote to ${cleanText(job.clientUserId?.fullName || "the client")}.`,
         actionLabel: "Open Jobs",
         onClick: () => {
@@ -2788,7 +2795,7 @@ const submitApplicationReview = async (decision) => {
     jobs.filter((job) => job.payment?.paymentStatus === "deposit_pending" && job.status !== "pending_review").forEach((job) => {
       items.push({
         id: `deposit-${job._id}`,
-        title: `${cleanText(job.title || "Job")} is waiting for deposit confirmation`,
+        title: `${cleanDisplayText(job.title || "Job")} is waiting for deposit confirmation`,
         detail: "Admin should confirm the client deposit before dispatch continues.",
         actionLabel: "Open Jobs",
         onClick: () => {
@@ -2802,7 +2809,7 @@ const submitApplicationReview = async (decision) => {
     jobs.filter((job) => job.status === "quote_accepted_ready_for_dispatch" && !["pending"].includes(String(job.workerOfferStatus || "").toLowerCase())).forEach((job) => {
       items.push({
         id: `dispatch-${job._id}`,
-        title: `${cleanText(job.title || "Job")} is ready for worker assignment`,
+        title: `${cleanDisplayText(job.title || "Job")} is ready for worker assignment`,
         detail: `${cleanText(job.clientUserId?.fullName || "Client")} accepted the quote. Dispatch a worker now.`,
         actionLabel: "Open Jobs",
         onClick: () => {
@@ -2819,7 +2826,7 @@ const submitApplicationReview = async (decision) => {
     ).forEach((job) => {
       items.push({
         id: `reassign-${job._id}`,
-        title: `${cleanText(job.title || "Job")} needs worker reassignment`,
+        title: `${cleanDisplayText(job.title || "Job")} needs worker reassignment`,
         detail: "The previous worker offer was declined or expired. Admin should assign another worker.",
         actionLabel: "Open Jobs",
         onClick: () => {
@@ -2833,7 +2840,7 @@ const submitApplicationReview = async (decision) => {
     jobs.filter((job) => job.status === "issue_reported").forEach((job) => {
       items.push({
         id: `issue-${job._id}`,
-        title: `${cleanText(job.title || "Job")} has an issue raised`,
+        title: `${cleanDisplayText(job.title || "Job")} has an issue raised`,
         detail: "Post-service issue needs admin intervention before release.",
         actionLabel: "Review Jobs",
         onClick: () => {
@@ -2847,7 +2854,7 @@ const submitApplicationReview = async (decision) => {
     jobs.filter((job) => job.payment?.paymentStatus === "client_reported_balance_payment").forEach((job) => {
       items.push({
         id: `payment-${job._id}`,
-        title: `${cleanText(job.title || "Job")} awaits payment verification`,
+        title: `${cleanDisplayText(job.title || "Job")} awaits payment verification`,
         detail: "Client reported balance payment. Verify before release.",
         actionLabel: "Open Awaiting Release",
         onClick: () => {
@@ -2864,7 +2871,7 @@ const submitApplicationReview = async (decision) => {
     ).forEach((job) => {
       items.push({
         id: `release-${job._id}`,
-        title: `${cleanText(job.title || "Job")} is ready for worker release`,
+        title: `${cleanDisplayText(job.title || "Job")} is ready for worker release`,
         detail: "Payment is fully verified. Admin should release the worker now.",
         actionLabel: "Open Awaiting Release",
         onClick: () => {
@@ -2881,7 +2888,7 @@ const submitApplicationReview = async (decision) => {
     ).forEach((job) => {
       items.push({
         id: `payout-${job._id}`,
-        title: `${cleanText(job.title || "Job")} is waiting for worker payout`,
+        title: `${cleanDisplayText(job.title || "Job")} is waiting for worker payout`,
         detail: "Admin should record worker payout with the M-Pesa transaction message.",
         actionLabel: "Open Jobs",
         onClick: () => {
@@ -3467,7 +3474,7 @@ const submitApplicationReview = async (decision) => {
                       >
                         <div style={{ minWidth: 0 }}>
                           <div style={{ color: "#f8fafc", fontSize: "1.05rem", fontWeight: 900, marginBottom: "6px" }}>
-                            {cleanText(job.title)}</div><div style={{ color: "#cbd5e1", fontSize: "0.92rem", lineHeight: 1.55 }}>
+                            {cleanDisplayText(job.title)}</div><div style={{ color: "#cbd5e1", fontSize: "0.92rem", lineHeight: 1.55 }}>
                             {compactClient} {compactLocation !== "-" ? `| ${compactLocation}` : ""}</div></div><div style={{ minWidth: 0 }}>
                           <div style={{ color: "#94a3b8", fontSize: "0.78rem", fontWeight: 800, marginBottom: "5px" }}>STAGE</div><div style={{ color: rowStage.tone, fontWeight: 900 }}>{rowStage.label}</div></div><div style={{ minWidth: 0 }}>
                           <div style={{ color: "#94a3b8", fontSize: "0.78rem", fontWeight: 800, marginBottom: "5px" }}>WORKER</div><div style={{ color: "#f8fafc", fontWeight: 800, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
@@ -3495,7 +3502,7 @@ const submitApplicationReview = async (decision) => {
                       <div className="job-head" style={{ alignItems: "flex-start", gap: "10px" }}>
                         <div>
                           <h3 style={{ fontSize: "1.5rem", color: "#f8fafc", marginBottom: "10px", letterSpacing: "0.01em" }}>
-                            {cleanText(job.title)}
+                            {cleanDisplayText(job.title)}
                           </h3>
                           <p style={{ color: "#dbe7f5", fontSize: "1rem", marginBottom: "18px", lineHeight: 1.7 }}>
                             {subtitleBits.map(cleanText).filter((bit) => bit && bit !== "-").join(` ${String.fromCharCode(8226)} `)}
@@ -3516,10 +3523,10 @@ const submitApplicationReview = async (decision) => {
                           <FieldRow label="Name" value={cleanText(job.clientUserId?.fullName || "-")} valueColor="#f8fafc" />
                           <FieldRow label="Phone" value={cleanText(job.clientUserId?.phone || "-")} valueColor="#bfdbfe" />
                           <FieldRow label="Address" value={cleanText([job.location?.addressLine, job.location?.estate, job.location?.town, job.location?.county].filter(Boolean).join(", ") || "-")} valueColor="#dbe7f5" />
-                          <FieldRow label="Description" value={cleanText(job.description || "-")} valueColor="#e2e8f0" />
-                          <FieldRow label="Instructions" value={cleanText(job.instructions || "-")} valueColor="#c7d2fe" />
-                          <FieldRow label="Avoid Notes" value={cleanText(job.avoidNotes || "-")} valueColor="#fca5a5" />
-                          <FieldRow label="Quote Notes" value={cleanText(job.pricing?.clientQuoteNotes || "-")} valueColor="#fcd34d" /></div><div className="glass-card section-card" style={{ padding: "16px", background: "linear-gradient(135deg, rgba(245,158,11,0.10), rgba(30,41,59,0.80))" }}>
+                          <FieldRow label="Description" value={cleanDisplayText(job.description || "-")} valueColor="#e2e8f0" />
+                          <FieldRow label="Instructions" value={cleanDisplayText(job.instructions || "-")} valueColor="#c7d2fe" />
+                          <FieldRow label="Avoid Notes" value={cleanDisplayText(job.avoidNotes || "-")} valueColor="#fca5a5" />
+                          <FieldRow label="Quote Notes" value={cleanDisplayText(job.pricing?.clientQuoteNotes || "-")} valueColor="#fcd34d" /></div><div className="glass-card section-card" style={{ padding: "16px", background: "linear-gradient(135deg, rgba(245,158,11,0.10), rgba(30,41,59,0.80))" }}>
                           <h4 style={{ marginBottom: "12px", color: "#fdba74" }}>Worker Profile</h4>
                           <FieldRow label="Name" value={cleanText(job.assignedWorker?.fullName || "Not assigned")} valueColor="#f8fafc" />
                           <FieldRow label="Phone" value={cleanText(job.assignedWorker?.phone || "-")} valueColor="#fde68a" />
@@ -3610,7 +3617,7 @@ const submitApplicationReview = async (decision) => {
                                   boxShadow: "0 10px 22px rgba(2,6,23,0.10)"
                                 }}
                               >
-                                <div style={{ fontWeight: 700 }}>{item.label}</div><div style={{ color: "#93c5fd", marginTop: 4 }}>{formatDateTime(item.time || item.at || item.createdAt)}</div><div style={{ color: "#dbe7f5", marginTop: 6 }}>{item.note}</div></div>))
+                                <div style={{ fontWeight: 700 }}>{item.label}</div><div style={{ color: "#93c5fd", marginTop: 4 }}>{formatDateTime(item.time || item.at || item.createdAt)}</div><div style={{ color: "#dbe7f5", marginTop: 6 }}>{cleanDisplayText(item.note)}</div></div>))
                           )}</div></div>{canQuote ? (
                         <div className="form-grid top-gap" style={{ marginTop: 18 }}>
                           <label className="field">
@@ -3800,7 +3807,33 @@ Please check your dashboard for the latest instructions.`
                 <div style={{ flex: "1 1 380px", minWidth: "280px" }}>
                   <div style={{ fontSize: "1.28rem", fontWeight: 900, color: "#f8fafc" }}>
                     {cleanText(worker.fullName || "-")}</div><div style={{ color: "#cbd5e1", marginTop: "4px" }}>{cleanText(worker.phone || "-")}</div><div style={{ color: "#cbd5e1", marginTop: "4px" }}>{cleanText(worker.email || "-")}</div></div><div style={{ minWidth: "220px" }}>
-                  <div style={{ color: statusTone, fontWeight: 800 }}>Status: {cleanText(worker.currentAccountState || worker.accountStatus || "-")}</div><div style={{ color: "#cbd5e1", marginTop: "6px" }}>Registered: {formatDateTime(worker.createdAt)}</div><div style={{ color: "#cbd5e1", marginTop: "6px" }}>Approved: {formatDateTime(worker.applicationSummary?.approvedAt)}</div><div style={{ color: "#cbd5e1", marginTop: "6px" }}>Last Login: {formatDateTime(worker.lastLoginAt)}</div></div></div><div
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                    <div style={{ color: statusTone, fontWeight: 800 }}>Status: {cleanText(worker.currentAccountState || worker.accountStatus || "-")}</div>
+                    <div
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        padding: "4px 10px",
+                        borderRadius: "999px",
+                        fontSize: "11px",
+                        fontWeight: 900,
+                        color: ["available", "on", "online", "ready"].includes(String(worker?.profile?.availability?.status || "").toLowerCase()) ? "#86efac" : "#fca5a5",
+                        background: ["available", "on", "online", "ready"].includes(String(worker?.profile?.availability?.status || "").toLowerCase()) ? "rgba(34,197,94,0.12)" : "rgba(239,68,68,0.12)",
+                        border: ["available", "on", "online", "ready"].includes(String(worker?.profile?.availability?.status || "").toLowerCase()) ? "1px solid rgba(34,197,94,0.28)" : "1px solid rgba(239,68,68,0.28)"
+                      }}
+                    >
+                      <span
+                        style={{
+                          width: "8px",
+                          height: "8px",
+                          borderRadius: "999px",
+                          background: ["available", "on", "online", "ready"].includes(String(worker?.profile?.availability?.status || "").toLowerCase()) ? "#22c55e" : "#ef4444"
+                        }}
+                      />
+                      {["available", "on", "online", "ready"].includes(String(worker?.profile?.availability?.status || "").toLowerCase()) ? "Online" : "Offline"}
+                    </div>
+                  </div><div style={{ color: "#cbd5e1", marginTop: "6px" }}>Registered: {formatDateTime(worker.createdAt)}</div><div style={{ color: "#cbd5e1", marginTop: "6px" }}>Approved: {formatDateTime(worker.applicationSummary?.approvedAt)}</div><div style={{ color: "#cbd5e1", marginTop: "6px" }}>Last Login: {formatDateTime(worker.lastLoginAt)}</div></div></div><div
                 style={{
                   marginTop: "12px",
                   display: "grid",
@@ -3937,7 +3970,7 @@ Please check your dashboard for the latest instructions.`
                 >
                   <div style={{ color: "#22d3ee", fontWeight: 800, marginBottom: "6px" }}>Payment Details</div>
                   <div style={{ color: "#f8fafc", fontWeight: 700, lineHeight: 1.7 }}>
-                    {`M-Pesa: ${cleanText(worker?.profile?.mpesaNumber || worker?.applicationRecord?.mpesaNumber || "-")} | Registered Name: ${cleanText(worker?.profile?.mpesaRegisteredName || worker?.applicationRecord?.mpesaRegisteredName || "-")} | Bank / Account: ${cleanText(worker?.profile?.bankAccountDetails || worker?.applicationRecord?.bankAccountDetails || worker?.profile?.bankAccountNumber || worker?.applicationRecord?.bankAccountNumber || "n/a")}`}
+                    {`M-Pesa: ${cleanText(worker?.profile?.mpesaNumber || worker?.applicationRecord?.mpesaNumber || "-")} | Registered Name: ${cleanText(worker?.profile?.mpesaRegisteredName || worker?.applicationRecord?.mpesaRegisteredName || worker?.profile?.bankAccountName || worker?.applicationRecord?.bankAccountName || "-")} | Bank / Account: ${cleanText(worker?.profile?.bankAccountDetails || worker?.applicationRecord?.bankAccountDetails || worker?.profile?.bankAccountNumber || worker?.applicationRecord?.bankAccountNumber || "n/a")}`}
                   </div>
                 </div>
 
@@ -3972,7 +4005,7 @@ Please check your dashboard for the latest instructions.`
                       className="primary-button admin-action-button"
                       style={{ background: WORKER_ORANGE, borderColor: WORKER_ORANGE, color: "#111827", minWidth: "170px" }}
                       onClick={() => window.open(getWhatsAppUrl(worker.phone), "_blank", "noopener,noreferrer")}
-                    >Email Worker</button>
+                    >WhatsApp Worker</button>
                   ) : null}
 
                   {worker.email ? (
@@ -4074,6 +4107,7 @@ Please check your dashboard for the latest instructions.`
                 <button
                   className="ghost-button admin-action-button"
                   type="button"
+                  style={{ borderColor: "rgba(139,92,246,0.30)", color: "#e9d5ff", background: "rgba(139,92,246,0.08)" }}
                   onClick={() => openAdminModal("override_client_profile", client)}
                 >
                   Override Profile
@@ -4092,6 +4126,7 @@ Please check your dashboard for the latest instructions.`
                   <button
                     type="button"
                     className="ghost-button admin-action-button"
+                    style={{ borderColor: "rgba(148,163,184,0.28)", color: "#e2e8f0", background: "rgba(148,163,184,0.08)" }}
                     onClick={() => window.open(getGmailComposeUrl(client.email, "HomeCare Client Support", ""), "_blank", "noopener,noreferrer")}
                   >
                     Email Client
@@ -4100,6 +4135,7 @@ Please check your dashboard for the latest instructions.`
                 <button
                   type="button"
                   className="ghost-button admin-action-button"
+                  style={{ borderColor: "rgba(250,204,21,0.30)", color: "#fde68a", background: "rgba(250,204,21,0.08)" }}
                   onClick={() => openAdminModal("reset_client_password", client)}
                 >
                   Reset Password
@@ -4108,6 +4144,7 @@ Please check your dashboard for the latest instructions.`
                   <button
                     type="button"
                     className="ghost-button admin-action-button"
+                    style={{ borderColor: "rgba(34,197,94,0.30)", color: "#bbf7d0", background: "rgba(34,197,94,0.08)" }}
                     onClick={() => openAdminModal("reactivate_client", client)}
                   >
                     Reactivate Client
@@ -4116,6 +4153,7 @@ Please check your dashboard for the latest instructions.`
                   <button
                     type="button"
                     className="ghost-button admin-action-button"
+                    style={{ borderColor: "rgba(245,158,11,0.30)", color: "#fde68a", background: "rgba(245,158,11,0.08)" }}
                     onClick={() => openAdminModal("suspend_client", client)}
                   >
                     Suspend Client
@@ -4617,6 +4655,20 @@ Please check your dashboard for the latest instructions.`
                       <div style={{ color: "#cbd5e1", marginTop: "4px" }}>{cleanText(admin.email || "-")}</div>
                       <div style={{ color: String(admin.isActive) === "false" ? "#fca5a5" : "#86efac", fontWeight: 800, marginTop: "8px" }}>
                         Status: {String(admin.isActive) === "false" ? "deactivated" : "active"}
+                      </div>
+                      <div
+                        style={{
+                          marginTop: "12px",
+                          padding: "12px 14px",
+                          borderRadius: "14px",
+                          border: "1px solid rgba(255,255,255,0.08)",
+                          background: "linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(148,163,184,0.03) 100%)"
+                        }}
+                      >
+                        <div style={{ color: "#22d3ee", fontWeight: 800, marginBottom: "6px" }}>Admin Audit Log</div>
+                        <div style={{ color: "#f8fafc", lineHeight: 1.75 }}>
+                          {`Created: ${formatDateTime(admin?.createdAt)} | Updated: ${formatDateTime(admin?.updatedAt)} | Last Password Reset: ${formatDateTime(admin?.lastPasswordResetAt || admin?.passwordResetAt)} | Deactivated At: ${formatDateTime(admin?.deactivatedAt || admin?.deletedAt)} | Deactivation Reason: ${cleanText(admin?.deactivationReason || admin?.reason || "-")} | Reactivated At: ${formatDateTime(admin?.reactivatedAt)} | Reactivation Note: ${cleanText(admin?.reactivationNote || admin?.note || "-")}`}
+                        </div>
                       </div>
                     </div>
 
