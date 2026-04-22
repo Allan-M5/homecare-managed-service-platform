@@ -344,6 +344,52 @@ function getWorkerTimeline(job) {
 }
 
 export default function WorkerDashboardPage() {
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    if (document.getElementById("worker-profile-mobile-fix")) return;
+
+    const style = document.createElement("style");
+    style.id = "worker-profile-mobile-fix";
+    style.innerHTML = `
+      @media (max-width: 900px) {
+        .worker-profile-head {
+          flex-direction: column !important;
+          align-items: flex-start !important;
+        }
+
+        .worker-profile-head .primary-button {
+          width: 100% !important;
+          min-width: 0 !important;
+        }
+
+        .worker-profile-main {
+          grid-template-columns: minmax(0, 1fr) !important;
+        }
+
+        .worker-profile-photo-shell {
+          width: 100% !important;
+        }
+
+        .worker-profile-photo-shell img {
+          object-fit: cover !important;
+        }
+
+        .worker-profile-detail-stack {
+          width: 100% !important;
+        }
+
+        .worker-profile-detail-stack > div {
+          width: 100% !important;
+        }
+
+        .worker-profile-head > div {
+          max-width: 100% !important;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+  }, []);
+
   const { handleAccountDeletion, logout, user, refreshCurrentUser } = useAuth();
 
   const navigate = useNavigate();
@@ -936,7 +982,7 @@ mpesaNumber: String(profileForm.mpesaNumber || "").trim(),
     : null;
 
   const sidebarExtra = (
-    <div style={{ display: "grid", gap: "12px" }}>
+    <div className="worker-profile-detail-stack" style={{ display: "grid", gap: "12px" }}>
       <div className="glass-subcard" style={{ padding: "16px", borderRadius: "18px" }}>
         <div style={{ color: "#f8fafc", fontSize: "1.05rem", fontWeight: 900 }}>{cleanText(dashboard?.worker?.fullName || "Worker")}</div>
         <div style={{ marginTop: "8px", display: "inline-flex", padding: "6px 12px", borderRadius: "999px", background: "rgba(34,197,94,0.14)", border: "1px solid rgba(74,222,128,0.30)", color: "#dcfce7", fontWeight: 800 }}>
@@ -1036,7 +1082,7 @@ mpesaNumber: String(profileForm.mpesaNumber || "").trim(),
 
       <div style={{ display: "grid", gap: "18px" }}>
         <div className="glass-card section-card" style={{ padding: "22px 22px 24px" }}>
-          <div className="section-head" style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "14px", marginBottom: "16px" }}>
+          <div className="section-head worker-profile-head" style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "14px", marginBottom: "16px" }}>
             <div style={{ maxWidth: "78%" }}>
               <h3 style={{ marginBottom: "6px" }}>Worker Profile</h3>
               <p style={{ color: "#dbe7f5", lineHeight: 1.7 }}>
@@ -1085,10 +1131,10 @@ profilePhotoDisplay: {
             </button>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "220px 1fr", gap: "18px", alignItems: "start" }}>
+          <div className="worker-profile-main" style={{ display: "grid", gridTemplateColumns: "220px 1fr", gap: "18px", alignItems: "start" }}>
             <button
               type="button"
-              className="glass-subcard"
+              className="glass-subcard worker-profile-photo-shell"
               onClick={() => {
                 if (workerProfilePhoto) { setProfileGalleryIndex(0); setProfileViewerZoom(1); setShowProfilePhotoModal(true); }
               }}

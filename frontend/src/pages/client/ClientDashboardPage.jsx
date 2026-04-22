@@ -352,7 +352,83 @@ function getTimeline(job) {
     .sort((a, b) => new Date(a.time) - new Date(b.time));
 }
 
+
 export default function ClientDashboardPage() {
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    if (document.getElementById("client-dashboard-mobile-fix")) return;
+
+    const style = document.createElement("style");
+    style.id = "client-dashboard-mobile-fix";
+    style.innerHTML = `
+      @media (max-width: 768px) {
+        .job-head {
+          grid-template-columns: minmax(0, 1fr) !important;
+          gap: 12px !important;
+        }
+
+        .badge-row {
+          justify-content: flex-start !important;
+          width: 100% !important;
+        }
+
+        .badge-row > * {
+          max-width: 100%;
+        }
+
+        .client-job-card-grid {
+          grid-template-columns: minmax(0, 1fr) !important;
+        }
+
+        .client-job-card-grid > div {
+          min-width: 0 !important;
+        }
+
+        .client-job-card-text,
+        .client-job-card-text * {
+          word-break: break-word !important;
+          overflow-wrap: anywhere !important;
+          white-space: normal !important;
+        }
+
+        .client-history-head {
+          flex-direction: column !important;
+          align-items: flex-start !important;
+        }
+
+        .client-history-head .ghost-button {
+          width: auto !important;
+        }
+
+        .client-dashboard-mobile-shell {
+          grid-template-columns: minmax(0, 1fr) !important;
+        }
+
+        .client-dashboard-mobile-shell > * {
+          min-width: 0 !important;
+          width: 100% !important;
+        }
+
+        .client-job-card-grid div,
+        .glass-card,
+        .glass-subcard {
+          min-width: 0 !important;
+        }
+
+        .action-row {
+          flex-wrap: wrap !important;
+        }
+
+        .action-row > button,
+        .action-row > a {
+          width: 100% !important;
+          min-width: 0 !important;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+  }, []);
+
   const { user, profile, handleAccountDeletion, refreshCurrentUser, logout } = useAuth();
 
   const [form, setForm] = useState(initialForm);
@@ -1125,11 +1201,12 @@ export default function ClientDashboardPage() {
         </div>
 
         <div
+          className="client-job-card-grid"
           style={{
             display: "grid",
             gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
             gap: "14px",
-            marginBottom: "16px"
+            marginBottom: "16px",
           }}
         >
           {[
@@ -1178,6 +1255,7 @@ export default function ClientDashboardPage() {
         </div>
 
         <div
+          className="client-job-card-text"
           style={{
             marginBottom: "10px",
             color: "#dbe7f5",
@@ -1547,7 +1625,7 @@ export default function ClientDashboardPage() {
               boxShadow: "0 18px 45px rgba(2,6,23,0.28)", width: "100%", minWidth: 0
             }}
           >
-            <div className="section-head">
+            <div className="section-head client-history-head">
               <div>
                 <h3 style={{ fontSize: "1.25rem", color: "#f8fafc", marginBottom: "8px", letterSpacing: "0.01em" }}>
                   Current / Active Jobs

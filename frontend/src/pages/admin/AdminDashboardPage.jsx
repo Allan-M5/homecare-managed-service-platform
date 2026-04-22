@@ -2344,9 +2344,19 @@ const resetModal = () => {
       setError("Super admin password is required to open this panel.");
       return;
     }
+
+    setError("");
+    setSuccess("");
     setSuperAdminPanelUnlocked(true);
     setAdminView("super_admin_management");
-    resetModal();
+    setModalState({ type: "", open: false, payload: null });
+    setModalForm({
+      password: "",
+      reason: "",
+      resolutionNote: "",
+      adminReviewNotes: "",
+      rejectionReason: ""
+    });
   };
 
   const submitMyPasswordChange = async () => {
@@ -3889,65 +3899,81 @@ const submitApplicationReview = async (decision) => {
                       <div style={{ color: "#f8fafc", fontWeight: 700, lineHeight: 1.7 }}>{value}</div>)}</div>))}</div>{renderWorkerApplicationSnapshot(worker)}
               {renderWorkerUploadCards(worker)}
 
-              <div className="action-row" style={{ marginTop: "12px", flexWrap: "wrap", gap: "10px" }}>
-                <button
-                  className="ghost-button"
-                  type="button"
-                  onClick={() => openAdminModal("override_worker_profile", worker)}
-                >
-                  Override Profile
-                </button>
-                {getWhatsAppUrl(worker.phone) ? (
+              <div style={{ marginTop: "14px", display: "grid", gap: "10px" }}>
+                <div className="action-row" style={{ flexWrap: "wrap", gap: "10px" }}>
+                  <button
+                    className="primary-button"
+                    type="button"
+                    style={{ minWidth: "170px" }}
+                    onClick={() => openAdminModal("override_worker_profile", worker)}
+                  >
+                    Override Profile
+                  </button>
+
+                  <button
+                    type="button"
+                    className="ghost-button"
+                    style={{ minWidth: "170px" }}
+                    onClick={() => openAdminModal("reset_worker_password", worker)}
+                  >
+                    Reset Worker Password
+                  </button>
+                </div>
+
+                <div className="action-row" style={{ flexWrap: "wrap", gap: "10px" }}>
+                  {getWhatsAppUrl(worker.phone) ? (
+                    <button
+                      type="button"
+                      className="primary-button"
+                      style={{ background: WORKER_ORANGE, borderColor: WORKER_ORANGE, color: "#111827", minWidth: "170px" }}
+                      onClick={() => window.open(getWhatsAppUrl(worker.phone), "_blank", "noopener,noreferrer")}
+                    >
+                      WhatsApp Worker
+                    </button>
+                  ) : null}
+
+                  {worker.email ? (
+                    <button
+                      type="button"
+                      className="ghost-button"
+                      style={{ minWidth: "170px" }}
+                      onClick={() => window.open(getGmailComposeUrl(worker.email, "HomeCare Worker Support", ""), "_blank", "noopener,noreferrer")}
+                    >
+                      Email Worker
+                    </button>
+                  ) : null}
+                </div>
+
+                <div className="action-row" style={{ flexWrap: "wrap", gap: "10px" }}>
+                  {String(worker.currentAccountState || worker.accountStatus || "").toLowerCase() === "suspended" ? (
+                    <button
+                      type="button"
+                      className="ghost-button"
+                      style={{ minWidth: "170px" }}
+                      onClick={() => openAdminModal("reactivate_worker", worker)}
+                    >
+                      Reactivate Worker
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="ghost-button"
+                      style={{ minWidth: "170px" }}
+                      onClick={() => openAdminModal("suspend_worker", worker)}
+                    >
+                      Suspend Worker
+                    </button>
+                  )}
+
                   <button
                     type="button"
                     className="primary-button"
-                    style={{ background: WORKER_ORANGE, borderColor: WORKER_ORANGE, color: "#111827" }}
-                    onClick={() => window.open(getWhatsAppUrl(worker.phone), "_blank", "noopener,noreferrer")}
+                    style={{ background: DANGER_RED, borderColor: DANGER_RED, color: "#fff", minWidth: "170px" }}
+                    onClick={() => openAdminModal("delete_worker", worker)}
                   >
-                    WhatsApp Worker
+                    Deactivate Worker
                   </button>
-                ) : null}
-                {worker.email ? (
-                  <button
-                    type="button"
-                    className="ghost-button"
-                    onClick={() => window.open(getGmailComposeUrl(worker.email, "HomeCare Worker Support", ""), "_blank", "noopener,noreferrer")}
-                  >
-                    Email Worker
-                  </button>
-                ) : null}
-                <button
-                  type="button"
-                  className="ghost-button"
-                  onClick={() => openAdminModal("reset_worker_password", worker)}
-                >
-                  Reset Password
-                </button>
-                {String(worker.currentAccountState || worker.accountStatus || "").toLowerCase() === "suspended" ? (
-                  <button
-                    type="button"
-                    className="ghost-button"
-                    onClick={() => openAdminModal("reactivate_worker", worker)}
-                  >
-                    Reactivate Worker
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    className="ghost-button"
-                    onClick={() => openAdminModal("suspend_worker", worker)}
-                  >
-                    Suspend Worker
-                  </button>
-                )}
-                <button
-                  type="button"
-                  className="primary-button"
-                  style={{ background: DANGER_RED, borderColor: DANGER_RED, color: "#fff" }}
-                  onClick={() => openAdminModal("delete_worker", worker)}
-                >
-                  Deactivate Worker
-                </button>
+                </div>
               </div>
             </div>
           );
