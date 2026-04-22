@@ -443,9 +443,7 @@ function renderWorkerApplicationSnapshot(worker) {
 
   const rows = [
     ["Next of Kin & Emergency", `Kin: ${cleanText(app.nextOfKinName || "-")} (${cleanText(app.nextOfKinRelationship || "-")}) | Kin Phone: ${cleanText(app.nextOfKinPhone || "-")} | Emergency: ${cleanText(app.neighborFriendContact || "-")}`, "#fca5a5"],
-    ["Payment Details", `M-Pesa: ${cleanText(app.mpesaNumber || "-")} | Registered Name: ${cleanText(app.mpesaRegisteredName || "-")} | Bank / Account: ${cleanText(app.bankAccountDetails || app.bankAccountNumber || "n/a")}`, "#22d3ee"],
-
-    ["Experience Summary", cleanText(app.experienceSummary || app.workExperience || "No experience summary submitted."), "#c4b5fd"],
+["Experience Summary", cleanText(app.experienceSummary || app.workExperience || "No experience summary submitted."), "#c4b5fd"],
     ["Application Notes", `DOB: ${cleanText(app.dateOfBirth || "-")} | National ID: ${cleanText(app.nationalIdNumber || "-")} | Alt Phone: ${cleanText(app.alternatePhone || "-")} | Preferred Days: ${Array.isArray(app.availableDays) ? app.availableDays.map(cleanText).join(", ") : cleanText(app.availableDays || "-")}`, "#93c5fd"]
   ];
 

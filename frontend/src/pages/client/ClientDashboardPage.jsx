@@ -49,12 +49,11 @@ function cleanText(value = "") {
   let text = String(value ?? "");
 
   const quickFixes = [
-    [/â€™|’| /g, "'"],
-    [/â€œ|“| /g, '"'],
-    [/â€\u009d|”| /g, '"'],
-    [/â€“|–/g, " "],
-    [/â€ "|—/g, " "],
-    [/ /g, ""],
+    [/â€™|’/g, "'"],
+    [/â€œ|“/g, '"'],
+    [/â€\u009d|”/g, '"'],
+    [/â€“|–/g, "-"],
+    [/â€”|—/g, " - "],
     [/\uFFFD/g, ""]
   ];
 
@@ -63,7 +62,7 @@ function cleanText(value = "") {
   }
 
   for (let i = 0; i < 2; i += 1) {
-    if (!/[  ’“ \uFFFD]/.test(text)) break;
+    if (!/[â€™â€œâ€\u009d\uFFFD]/.test(text)) break;
 
     try {
       const decoded = decodeURIComponent(escape(text));
@@ -79,6 +78,13 @@ function cleanText(value = "") {
   }
 
   return text.replace(/\s+/g, " ").trim();
+}
+
+function cleanDisplayText(value = "") {
+  return cleanText(value)
+    .replace(/([A-Za-z0-9]{2,})'(?=[A-Za-z0-9]{2,})/g, "$1 ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function formatMoney(value) {
@@ -204,7 +210,7 @@ function getClientExtraTimeState(job = {}) {
   const requestedMinutes = Number(ext?.requestedMinutes || noteMinutesMatch?.[1] || 0);
 
   const reasonMatch = noteSource.match(/reason:\s*([^|]+)/i);
-  const reason = cleanText(reasonMatch?.[1] || ext?.reason || noteSource || "-");
+  const reason = cleanDisplayText(reasonMatch?.[1] || ext?.reason || noteSource || "-");
 
   const approved =
     ["approved"].includes(status) ||
@@ -246,7 +252,7 @@ function getTimeline(job) {
     items.push({
       label: "Job created",
       time: job.createdAt,
-      note: cleanText(job.description || job.serviceCategory || "Job created")
+      note: cleanDisplayText(job.description || job.serviceCategory || "Job created")
     });
   }
 
@@ -254,7 +260,7 @@ function getTimeline(job) {
     items.push({
       label: "Admin sent final quote",
       time: quoteTime,
-      note: cleanText(
+      note: cleanDisplayText(
         `${formatMoney(job.pricing?.finalClientChargeAmount || 0)}${job?.payment?.depositAmount ? ` | Deposit ${formatMoney(job.payment.depositAmount)}` : ""}${job?.pricing?.clientQuoteNotes ? ` | ${job.pricing.clientQuoteNotes}` : ""}`
       )
     });
@@ -272,7 +278,7 @@ function getTimeline(job) {
     items.push({
       label: "Worker assigned",
       time: job.assignedAt,
-      note: cleanText(job.assignedWorker?.fullName || "Worker assigned")
+      note: cleanDisplayText(job.assignedWorker?.fullName || "Worker assigned")
     });
   }
 
@@ -321,7 +327,7 @@ function getTimeline(job) {
     items.push({
       label: "Service balance payment",
       time: paymentTime,
-      note: cleanText(job?.payment?.clientPaymentProofText || "Balance payment recorded")
+      note: cleanDisplayText(job?.payment?.clientPaymentProofText || "Balance payment recorded")
     });
   }
 
@@ -341,9 +347,9 @@ function getTimeline(job) {
           )
         )
         .map((entry) => ({
-          label: cleanText(entry?.title || "Timeline update"),
+          label: cleanDisplayText(entry?.title || "Timeline update"),
           time: entry?.createdAt,
-          note: cleanText(entry?.note || "-")
+          note: cleanDisplayText(entry?.note || "-")
         }))
     : [];
 
@@ -640,7 +646,7 @@ export default function ClientDashboardPage() {
   }, [jobs, activeJobs]);
 
   const getClientActiveStatusLabel = (job) => {
-    return cleanText(
+    return cleanDisplayText(
       job?.status ||
       job?.assignmentStatus ||
       job?.pricing?.quoteStatus ||
@@ -650,7 +656,7 @@ export default function ClientDashboardPage() {
   };
 
   const presentValue = (value, fallback = "Not yet available") => {
-    const cleaned = cleanText(value || "");
+    const cleaned = cleanDisplayText(value || "");
     if (!cleaned || cleaned === " " || cleaned === "-" || cleaned === "   ") {
       return fallback;
     }
@@ -1205,10 +1211,10 @@ export default function ClientDashboardPage() {
                 marginBottom: "8px"
               }}
             >
-              {cleanText(job.title)}
+              {cleanDisplayText(job.title)}
             </h4>
             <p style={{ color: "#cbd5e1", margin: 0, fontSize: "1rem" }}>
-              {`${cleanText(job.location?.estate || "-")}   Budget ${formatMoney(job.budgetAmount)}`}
+              {`${cleanDisplayText(job.location?.estate || "-")}   Budget ${formatMoney(job.budgetAmount)}`}
             </p>
           </div>
 
@@ -1442,10 +1448,10 @@ export default function ClientDashboardPage() {
 
       <div className="stats-grid" style={{ marginBottom: "20px" }}>
         <div className="glass-card" style={{ padding: "4px", borderRadius: "26px", background: "linear-gradient(135deg, rgba(59,130,246,0.18) 0%, rgba(15,23,42,0.12) 100%)", border: "1px solid rgba(96,165,250,0.18)" }}>
-          <StatCard label="Client" value={cleanText(user?.fullName || "Client")} hint="Signed-in account" />
+          <StatCard label="Client" value={cleanDisplayText(user?.fullName || "Client")} hint="Signed-in account" />
         </div>
         <div className="glass-card" style={{ padding: "4px", borderRadius: "26px", background: "linear-gradient(135deg, rgba(20,184,166,0.16) 0%, rgba(15,23,42,0.12) 100%)", border: "1px solid rgba(45,212,191,0.18)" }}>
-          <StatCard label="Estate" value={cleanText(profile?.defaultLocation?.estate || "Not set")} hint="Default area" />
+          <StatCard label="Estate" value={cleanDisplayText(profile?.defaultLocation?.estate || "Not set")} hint="Default area" />
         </div>
         <div className="glass-card" style={{ padding: "4px", borderRadius: "26px", background: "linear-gradient(135deg, rgba(168,85,247,0.16) 0%, rgba(15,23,42,0.12) 100%)", border: "1px solid rgba(196,181,253,0.18)" }}>
           <StatCard label="My Jobs" value={jobs.length} hint="Recorded service requests" />
@@ -1489,14 +1495,14 @@ export default function ClientDashboardPage() {
         </div>
 
         <div className="details-grid" style={{ marginTop: "8px", rowGap: "14px", columnGap: "18px", alignItems: "start", background: "linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(148,163,184,0.03) 100%)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "20px", padding: "18px 18px 16px" }}>
-          <div><strong style={{ color: "#cbd5e1" }}>Full Name:</strong> <span style={{ color: "#f8fafc" }}>{cleanText(user?.fullName || "-")}</span></div>
+          <div><strong style={{ color: "#cbd5e1" }}>Full Name:</strong> <span style={{ color: "#f8fafc" }}>{cleanDisplayText(user?.fullName || "-")}</span></div>
           <div><strong style={{ color: "#cbd5e1" }}>Phone:</strong> <span style={{ color: "#f8fafc" }}>{cleanText(user?.phone || "-")}</span></div>
           <div><strong style={{ color: "#cbd5e1" }}>Email:</strong> <span style={{ color: "#dbe7f5" }}>{cleanText(user?.email || "-")}</span></div>
-          <div><strong style={{ color: "#cbd5e1" }}>County:</strong> <span style={{ color: "#dbe7f5" }}>{cleanText(profile?.defaultLocation?.county || "-")}</span></div>
-          <div><strong style={{ color: "#cbd5e1" }}>Town:</strong> <span style={{ color: "#dbe7f5" }}>{cleanText(profile?.defaultLocation?.town || "-")}</span></div>
-          <div><strong style={{ color: "#cbd5e1" }}>Estate:</strong> <span style={{ color: "#dbe7f5" }}>{cleanText(profile?.defaultLocation?.estate || "-")}</span></div>
-          <div className="field-span-2"><strong style={{ color: "#cbd5e1" }}>Address:</strong> <span style={{ color: "#dbe7f5" }}>{cleanText(profile?.defaultLocation?.addressLine || "-")}</span></div>
-          <div className="field-span-2"><strong style={{ color: "#cbd5e1" }}>House Details:</strong> <span style={{ color: "#dbe7f5" }}>{cleanText(profile?.defaultLocation?.houseDetails || "-")}</span></div>
+          <div><strong style={{ color: "#cbd5e1" }}>County:</strong> <span style={{ color: "#dbe7f5" }}>{cleanDisplayText(profile?.defaultLocation?.county || "-")}</span></div>
+          <div><strong style={{ color: "#cbd5e1" }}>Town:</strong> <span style={{ color: "#dbe7f5" }}>{cleanDisplayText(profile?.defaultLocation?.town || "-")}</span></div>
+          <div><strong style={{ color: "#cbd5e1" }}>Estate:</strong> <span style={{ color: "#dbe7f5" }}>{cleanDisplayText(profile?.defaultLocation?.estate || "-")}</span></div>
+          <div className="field-span-2"><strong style={{ color: "#cbd5e1" }}>Address:</strong> <span style={{ color: "#dbe7f5" }}>{cleanDisplayText(profile?.defaultLocation?.addressLine || "-")}</span></div>
+          <div className="field-span-2"><strong style={{ color: "#cbd5e1" }}>House Details:</strong> <span style={{ color: "#dbe7f5" }}>{cleanDisplayText(profile?.defaultLocation?.houseDetails || "-")}</span></div>
         </div>
       </div>
 
@@ -2046,6 +2052,7 @@ export default function ClientDashboardPage() {
     </AppShell>
   );
 }
+
 
 
 
