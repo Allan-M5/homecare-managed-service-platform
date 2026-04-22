@@ -111,6 +111,42 @@ function PreviewImage({ src, alt }) {
 }
 
 export default function ApplyWorkerPage() {
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    if (document.getElementById("apply-worker-mobile-fix")) return;
+
+    const style = document.createElement("style");
+    style.id = "apply-worker-mobile-fix";
+    style.innerHTML = `
+      @media (max-width: 768px) {
+        .apply-worker-grid,
+        .apply-worker-grid-2,
+        .apply-worker-form-grid,
+        .details-grid,
+        .form-grid {
+          grid-template-columns: minmax(0, 1fr) !important;
+        }
+
+        input,
+        textarea,
+        select {
+          width: 100% !important;
+          min-width: 0 !important;
+          max-width: 100% !important;
+          box-sizing: border-box !important;
+        }
+
+        input[type="date"],
+        input[type="time"],
+        input[type="datetime-local"] {
+          width: 100% !important;
+          min-width: 0 !important;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+  }, []);
+
   const navigate = useNavigate();
 
   const [step, setStep] = useState(1);
@@ -593,7 +629,7 @@ export default function ApplyWorkerPage() {
               </p>
             </div>
 
-            <div className="form-grid">
+            <div className="form-grid apply-worker-form-grid">
               <label className="field">
                 <span>Full Legal Name <span style={{ color: "#fca5a5" }}>*</span></span>
                 <input
@@ -730,7 +766,7 @@ export default function ApplyWorkerPage() {
               Tip: Open Google Maps, pin your exact home location, tap Share, then paste the copied pin link here.
             </div>
 
-            <div className="form-grid">
+            <div className="form-grid apply-worker-form-grid">
               <label className="field">
                 <span>Next of Kin Full Name <span style={{ color: "#fca5a5" }}>*</span></span>
                 <input
@@ -857,7 +893,7 @@ export default function ApplyWorkerPage() {
               </label>
             </div>
 
-            <div className="form-grid" style={{ marginTop: "20px" }}>
+            <div className="form-grid apply-worker-form-grid" style={{ marginTop: "20px" }}>
               <label className="field field-span-2">
                 <span>Experience Summary</span>
                 <textarea
@@ -927,7 +963,7 @@ export default function ApplyWorkerPage() {
               </label>
             </div>
 
-            <div className="form-grid" style={{ marginTop: "20px" }}>
+            <div className="form-grid apply-worker-form-grid" style={{ marginTop: "20px" }}>
               <label className="field">
                 <span>Available Start Time</span>
                 <input
@@ -979,7 +1015,7 @@ export default function ApplyWorkerPage() {
               </label>
             </div>
 
-            <div className="form-grid" style={{ marginTop: "20px" }}>
+            <div className="form-grid apply-worker-form-grid" style={{ marginTop: "20px" }}>
               <label className="field">
                 <span>Profile Photo <span style={{ color: "#fca5a5" }}>*</span></span>
                 <input
@@ -1102,11 +1138,7 @@ export default function ApplyWorkerPage() {
               boxShadow: "0 0 12px rgba(245,158,11,0.6)"
             }}
           />
-        </div>
-        <div style={{ color: "#f8d7a0", fontSize: "13px" }}>
-          Swipe right to return to intro
-        </div>
-      </div>
+        </div>      </div>
     </div>
   );
 }

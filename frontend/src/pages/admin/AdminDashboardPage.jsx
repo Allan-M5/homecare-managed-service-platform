@@ -617,7 +617,7 @@ function ModalShell({ title, onClose, width = 640, children }) {
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "10px", marginBottom: "16px" }}>
           <h3 style={{ margin: 0, color: "#f8fafc" }}>{title}</h3>
-          <button className="ghost-button" onClick={onClose}>Close</button></div>{children}</div></div>);
+          <button className="ghost-button admin-action-button" onClick={onClose}>Close</button></div>{children}</div></div>);
 }
 
 
@@ -1274,6 +1274,22 @@ export default function AdminDashboardPage() {
     const style = document.createElement("style");
     style.id = "admin-live-ui-style";
     style.innerHTML = `
+      .admin-action-button {
+        box-shadow: 0 14px 28px rgba(2,6,23,0.18);
+      }
+      @media (max-width: 768px) {
+        .admin-action-stack {
+          display: grid !important;
+          grid-template-columns: minmax(0, 1fr) !important;
+        }
+        .admin-action-stack > * {
+          width: 100% !important;
+          min-width: 0 !important;
+        }
+        .admin-directory-top-grid {
+          grid-template-columns: minmax(0, 1fr) !important;
+        }
+      }
       @keyframes status-pulse {
         0% { transform: scale(1); opacity: 0.82; }
         70% { transform: scale(2.5); opacity: 0; }
@@ -3033,7 +3049,7 @@ const submitApplicationReview = async (decision) => {
               <div style={{ color: "#f8fafc", fontWeight: 900, fontSize: "1.05rem" }}>
                 {adminImagePreview.label}</div><button
                 type="button"
-                className="ghost-button"
+                className="ghost-button admin-action-button"
                 onClick={() => setAdminImagePreview({ open: false, src: "", label: "" })}
               >
                 Close
@@ -3255,7 +3271,7 @@ const submitApplicationReview = async (decision) => {
           />
           <button
             type="button"
-            className="ghost-button"
+            className="ghost-button admin-action-button"
             onClick={refreshCurrentView}
             disabled={isRefreshingSection}
             style={{
@@ -3338,7 +3354,7 @@ const submitApplicationReview = async (decision) => {
               <div style={{ display: "flex", justifyContent: "space-between", gap: "10px", alignItems: "center", marginBottom: "10px", flexWrap: "wrap" }}>
                 <div>
                   <h3 style={{ margin: 0, color: "#f8fafc" }}>Activities Today</h3>
-                  <p style={{ color: "#cbd5e1", marginTop: "6px" }}>Protected operational daily metrics.</p></div><button className="ghost-button" onClick={() => setActivitiesUnlocked(false)}>
+                  <p style={{ color: "#cbd5e1", marginTop: "6px" }}>Protected operational daily metrics.</p></div><button className="ghost-button admin-action-button" onClick={() => setActivitiesUnlocked(false)}>
                   Lock Again
                 </button></div><div className="stats-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "10px" }}>
                 {activitiesToday.map(([label, value]) => (
@@ -3363,7 +3379,7 @@ const submitApplicationReview = async (decision) => {
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "10px", marginBottom: "10px", flexWrap: "wrap" }}>
                   <div style={{ color: "#dbe7f5", fontWeight: 700 }}>
                     {jobFocusFilter === "live" ? "Showing live jobs only" : jobFocusFilter === "awaiting_release" ? "Showing jobs awaiting release only" : "Showing all jobs"}</div>{jobFocusFilter !== "all" ? (
-                    <button className="ghost-button" onClick={() => setJobFocusFilter("all")}>Clear Job Filter</button>
+                    <button className="ghost-button admin-action-button" onClick={() => setJobFocusFilter("all")}>Clear Job Filter</button>
                   ) : null}</div>{visibleJobs
                 .slice()
                 .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
@@ -3548,7 +3564,7 @@ const submitApplicationReview = async (decision) => {
                           <div>
                             <h4 style={{ marginBottom: 8, color: "#f8fafc", fontSize: "1.08rem" }}>Job History</h4>
                             <p style={{ color: "#dbe7f5", lineHeight: 1.7 }}>All major progress for this job stays inside this card.</p></div><button
-                            className="ghost-button"
+                            className="ghost-button admin-action-button"
                             onClick={() => {
                               if (!trackingOpen) {
                                 setError("Forbidden for use outside assignment period.");
@@ -3630,10 +3646,10 @@ const submitApplicationReview = async (decision) => {
                             Send Final Quote
                           </button></div>) : null}
 
-                      <div className="action-row" style={{ marginTop: 16, flexWrap: "wrap" }}>
+                      <div className="action-row admin-action-stack" style={{ marginTop: 16, flexWrap: "wrap" }}>
                         {clientWhatsappUrl ? (
                           <button
-                            className="primary-button"
+                            className="primary-button admin-action-button"
                             style={{ background: CLIENT_BLUE, borderColor: CLIENT_BLUE, color: "#eff6ff" }}
                             onClick={() => window.open(clientWhatsappUrl, "_blank", "noopener,noreferrer")}
                           >
@@ -3643,7 +3659,7 @@ const submitApplicationReview = async (decision) => {
 
                         {workerWhatsappUrl ? (
                           <button
-                            className="primary-button"
+                            className="primary-button admin-action-button"
                             style={{ background: WORKER_ORANGE, borderColor: WORKER_ORANGE, color: "#111827" }}
                             onClick={() => window.open(workerWhatsappUrl, "_blank", "noopener,noreferrer")}
                           >
@@ -3652,50 +3668,50 @@ const submitApplicationReview = async (decision) => {
                         ) : null}
 
                         {canAssign ? (
-                          <button className="primary-button" onClick={() => { setSelectedJob(job); setAssignDraft({ workerUserId: "", workerOfferedAmount: String(job?.pricing?.workerOfferedAmount || Math.max(0, Math.round(Number(job?.pricing?.finalClientChargeAmount || 0) * 0.8))), adminQuoteNotes: "", platformRetentionRate: String(job?.pricing?.platformRetentionRate || 20) }); }}>
+                          <button className="primary-button admin-action-button" onClick={() => { setSelectedJob(job); setAssignDraft({ workerUserId: "", workerOfferedAmount: String(job?.pricing?.workerOfferedAmount || Math.max(0, Math.round(Number(job?.pricing?.finalClientChargeAmount || 0) * 0.8))), adminQuoteNotes: "", platformRetentionRate: String(job?.pricing?.platformRetentionRate || 20) }); }}>
                             Assign Worker
                           </button>
                         ) : null}
 
                         {canMarkDeposit ? (
-                          <button className="ghost-button" onClick={() => handleMarkDepositPaid(job._id)}>
+                          <button className="ghost-button admin-action-button" onClick={() => handleMarkDepositPaid(job._id)}>
                             Mark Deposit Paid
                           </button>
                         ) : null}
 
                         {canVerifyPayment ? (
-                          <button className="ghost-button" disabled={actingJobId === job._id} onClick={() => handleVerifyPayment(job._id)}>
+                          <button className="ghost-button admin-action-button" disabled={actingJobId === job._id} onClick={() => handleVerifyPayment(job._id)}>
                             {actingJobId === job._id ? "Working..." : "Payment Received"}
                           </button>
                         ) : null}
 
                         {canFinalizeRelease ? (
-                          <button className="primary-button" disabled={actingJobId === job._id} onClick={() => handleFinalizeRelease(job)}>
+                          <button className="primary-button admin-action-button" disabled={actingJobId === job._id} onClick={() => handleFinalizeRelease(job)}>
                             {actingJobId === job._id ? "Finalizing..." : "Verify Payment and Release Worker"}
                           </button>
                         ) : null}
 
                         {canRaiseIssue ? (
-                          <button className="ghost-button" onClick={() => setModalState({ type: "raise_issue", open: true, payload: job })}>
+                          <button className="ghost-button admin-action-button" onClick={() => setModalState({ type: "raise_issue", open: true, payload: job })}>
                             Issue Raised
                           </button>
                         ) : null}
 
                         {canResolveIssue ? (
-                          <button className="ghost-button" onClick={() => setModalState({ type: "resolve_issue", open: true, payload: job })}>
+                          <button className="ghost-button admin-action-button" onClick={() => setModalState({ type: "resolve_issue", open: true, payload: job })}>
                             Resolve Issue
                           </button>
                         ) : null}
 
                         {canRelease ? (
-                          <button className="primary-button" disabled={actingJobId === job._id} onClick={() => handleReleaseWorker(job)}>
+                          <button className="primary-button admin-action-button" disabled={actingJobId === job._id} onClick={() => handleReleaseWorker(job)}>
                             {actingJobId === job._id ? "Releasing..." : "Release Worker"}
                           </button>
                         ) : null}
 
                         {canPayWorker ? (
                           <button
-                            className="ghost-button"
+                            className="ghost-button admin-action-button"
                             onClick={() => openPayWorkerModal(job)}
                           >
                             Pay Worker
@@ -3704,7 +3720,7 @@ const submitApplicationReview = async (decision) => {
 
                         {released ? (
                           <button
-                            className="primary-button"
+                            className="primary-button admin-action-button"
                             disabled
                             style={{
                               background: "linear-gradient(135deg, rgba(74,222,128,0.95) 0%, rgba(16,185,129,0.95) 100%)",
@@ -3868,7 +3884,7 @@ const submitApplicationReview = async (decision) => {
                       <div style={{ color: "#e2e8f0", lineHeight: 1.6, wordBreak: "break-all", marginBottom: "10px" }}>
                         {worker?.profile?.homeLocation?.googlePinUrl || worker?.applicationRecord?.homeLocation?.googlePinUrl || worker?.applicationRecord?.googlePinUrl || worker?.applicationRecord?.locationPinUrl}</div><button
                         type="button"
-                        className="ghost-button"
+                        className="ghost-button admin-action-button"
                         onClick={() =>
                           window.open(
                             worker?.profile?.homeLocation?.googlePinUrl || worker?.applicationRecord?.homeLocation?.googlePinUrl || worker?.applicationRecord?.googlePinUrl || worker?.applicationRecord?.locationPinUrl,
@@ -3900,9 +3916,9 @@ const submitApplicationReview = async (decision) => {
               {renderWorkerUploadCards(worker)}
 
               <div style={{ marginTop: "14px", display: "grid", gap: "10px" }}>
-                <div className="action-row" style={{ flexWrap: "wrap", gap: "10px" }}>
+                <div className="action-row admin-action-stack" style={{ flexWrap: "wrap", gap: "10px" }}>
                   <button
-                    className="primary-button"
+                    className="primary-button admin-action-button"
                     type="button"
                     style={{ minWidth: "170px" }}
                     onClick={() => openAdminModal("override_worker_profile", worker)}
@@ -3912,7 +3928,7 @@ const submitApplicationReview = async (decision) => {
 
                   <button
                     type="button"
-                    className="ghost-button"
+                    className="ghost-button admin-action-button"
                     style={{ minWidth: "170px" }}
                     onClick={() => openAdminModal("reset_worker_password", worker)}
                   >
@@ -3920,22 +3936,20 @@ const submitApplicationReview = async (decision) => {
                   </button>
                 </div>
 
-                <div className="action-row" style={{ flexWrap: "wrap", gap: "10px" }}>
+                <div className="action-row admin-action-stack" style={{ flexWrap: "wrap", gap: "10px" }}>
                   {getWhatsAppUrl(worker.phone) ? (
                     <button
                       type="button"
-                      className="primary-button"
+                      className="primary-button admin-action-button"
                       style={{ background: WORKER_ORANGE, borderColor: WORKER_ORANGE, color: "#111827", minWidth: "170px" }}
                       onClick={() => window.open(getWhatsAppUrl(worker.phone), "_blank", "noopener,noreferrer")}
-                    >
-                      WhatsApp Worker
-                    </button>
+                    >WhatsApp Worker</button>
                   ) : null}
 
                   {worker.email ? (
                     <button
                       type="button"
-                      className="ghost-button"
+                      className="ghost-button admin-action-button"
                       style={{ minWidth: "170px" }}
                       onClick={() => window.open(getGmailComposeUrl(worker.email, "HomeCare Worker Support", ""), "_blank", "noopener,noreferrer")}
                     >
@@ -3944,11 +3958,11 @@ const submitApplicationReview = async (decision) => {
                   ) : null}
                 </div>
 
-                <div className="action-row" style={{ flexWrap: "wrap", gap: "10px" }}>
+                <div className="action-row admin-action-stack" style={{ flexWrap: "wrap", gap: "10px" }}>
                   {String(worker.currentAccountState || worker.accountStatus || "").toLowerCase() === "suspended" ? (
                     <button
                       type="button"
-                      className="ghost-button"
+                      className="ghost-button admin-action-button"
                       style={{ minWidth: "170px" }}
                       onClick={() => openAdminModal("reactivate_worker", worker)}
                     >
@@ -3957,7 +3971,7 @@ const submitApplicationReview = async (decision) => {
                   ) : (
                     <button
                       type="button"
-                      className="ghost-button"
+                      className="ghost-button admin-action-button"
                       style={{ minWidth: "170px" }}
                       onClick={() => openAdminModal("suspend_worker", worker)}
                     >
@@ -3967,7 +3981,7 @@ const submitApplicationReview = async (decision) => {
 
                   <button
                     type="button"
-                    className="primary-button"
+                    className="primary-button admin-action-button"
                     style={{ background: DANGER_RED, borderColor: DANGER_RED, color: "#fff", minWidth: "170px" }}
                     onClick={() => openAdminModal("delete_worker", worker)}
                   >
@@ -4027,9 +4041,9 @@ const submitApplicationReview = async (decision) => {
                 ))}
               </div>
 
-              <div className="action-row" style={{ marginTop: "12px", flexWrap: "wrap", gap: "10px" }}>
+              <div className="action-row admin-action-stack" style={{ marginTop: "12px", flexWrap: "wrap", gap: "10px" }}>
                 <button
-                  className="ghost-button"
+                  className="ghost-button admin-action-button"
                   type="button"
                   onClick={() => openAdminModal("override_client_profile", client)}
                 >
@@ -4038,7 +4052,7 @@ const submitApplicationReview = async (decision) => {
                 {getWhatsAppUrl(client.phone) ? (
                   <button
                     type="button"
-                    className="primary-button"
+                    className="primary-button admin-action-button"
                     style={{ background: CLIENT_BLUE, borderColor: CLIENT_BLUE, color: "#eff6ff" }}
                     onClick={() => window.open(getWhatsAppUrl(client.phone), "_blank", "noopener,noreferrer")}
                   >
@@ -4048,7 +4062,7 @@ const submitApplicationReview = async (decision) => {
                 {client.email ? (
                   <button
                     type="button"
-                    className="ghost-button"
+                    className="ghost-button admin-action-button"
                     onClick={() => window.open(getGmailComposeUrl(client.email, "HomeCare Client Support", ""), "_blank", "noopener,noreferrer")}
                   >
                     Email Client
@@ -4056,7 +4070,7 @@ const submitApplicationReview = async (decision) => {
                 ) : null}
                 <button
                   type="button"
-                  className="ghost-button"
+                  className="ghost-button admin-action-button"
                   onClick={() => openAdminModal("reset_client_password", client)}
                 >
                   Reset Password
@@ -4064,7 +4078,7 @@ const submitApplicationReview = async (decision) => {
                 {String(client.currentAccountState || client.accountStatus || "").toLowerCase() === "suspended" ? (
                   <button
                     type="button"
-                    className="ghost-button"
+                    className="ghost-button admin-action-button"
                     onClick={() => openAdminModal("reactivate_client", client)}
                   >
                     Reactivate Client
@@ -4072,7 +4086,7 @@ const submitApplicationReview = async (decision) => {
                 ) : (
                   <button
                     type="button"
-                    className="ghost-button"
+                    className="ghost-button admin-action-button"
                     onClick={() => openAdminModal("suspend_client", client)}
                   >
                     Suspend Client
@@ -4080,7 +4094,7 @@ const submitApplicationReview = async (decision) => {
                 )}
                 <button
                   type="button"
-                  className="primary-button"
+                  className="primary-button admin-action-button"
                   style={{ background: DANGER_RED, borderColor: DANGER_RED, color: "#fff" }}
                   onClick={() => openAdminModal("delete_client", client)}
                 >
@@ -4140,9 +4154,9 @@ const submitApplicationReview = async (decision) => {
                     <div style={{ color: "#22d3ee", marginTop: "8px", lineHeight: 1.7 }}>
                       <strong>Profile Audit:</strong> Suspended At: {formatDateTime(worker.suspendedAt)} | Suspend Reason: {cleanText(worker.suspendedReason || "-")} | Reactivated At: {formatDateTime(worker.reactivatedAt)} | Reactivation Note: {cleanText(worker.reactivationNote || "-")} | Deactivated At: {formatDateTime(worker.deletedAt)} | Deactivation Reason: {cleanText(worker.deletionReason || "-")}
                     </div>
-                    <div className="action-row" style={{ marginTop: "12px", flexWrap: "wrap" }}>
+                    <div className="action-row admin-action-stack" style={{ marginTop: "12px", flexWrap: "wrap" }}>
                       <button
-                        className="ghost-button"
+                        className="ghost-button admin-action-button"
                         onClick={() => openAdminModal("reactivate_worker", worker, { resolutionNote: "" })}
                       >
                         Reactivate Worker
@@ -4202,9 +4216,9 @@ const submitApplicationReview = async (decision) => {
                     <div style={{ color: "#22d3ee", marginTop: "8px", lineHeight: 1.7 }}>
                       <strong>Profile Audit:</strong> Suspended At: {formatDateTime(client.suspendedAt)} | Suspend Reason: {cleanText(client.suspendedReason || "-")} | Deactivated At: {formatDateTime(client.deletedAt)} | Deactivation Reason: {cleanText(client.deletionReason || "-")}
                     </div>
-                    <div className="action-row" style={{ marginTop: "12px", flexWrap: "wrap" }}>
+                    <div className="action-row admin-action-stack" style={{ marginTop: "12px", flexWrap: "wrap" }}>
                       <button
-                        className="ghost-button"
+                        className="ghost-button admin-action-button"
                         onClick={() => openAdminModal("reactivate_client", client, { resolutionNote: "" })}
                       >
                         Reactivate Client
@@ -4263,9 +4277,9 @@ const submitApplicationReview = async (decision) => {
                     <div style={{ color: "#22d3ee", marginTop: "8px", lineHeight: 1.7 }}>
                       <strong>Profile Audit:</strong> Suspended At: {formatDateTime(worker.suspendedAt)} | Suspend Reason: {cleanText(worker.suspendedReason || "-")} | Reactivated At: {formatDateTime(worker.reactivatedAt)} | Reactivation Reason: {cleanText(worker.reactivationNote || "-")} | Deactivated At: {formatDateTime(worker.deletedAt)} | Deactivation Reason: {cleanText(worker.deletionReason || "-")}
                     </div>
-                    <div className="action-row" style={{ marginTop: "12px", flexWrap: "wrap", gap: "10px" }}>
+                    <div className="action-row admin-action-stack" style={{ marginTop: "12px", flexWrap: "wrap", gap: "10px" }}>
                       <button
-                        className="primary-button"
+                        className="primary-button admin-action-button"
                         style={{ background: SUCCESS_GREEN, borderColor: SUCCESS_GREEN, color: "#052e16", minWidth: "172px" }}
                         onClick={() => openAdminModal("reactivate_worker", worker, { resolutionNote: "" })}
                       >
@@ -4327,9 +4341,9 @@ const submitApplicationReview = async (decision) => {
                     <div style={{ color: "#22d3ee", marginTop: "8px", lineHeight: 1.7 }}>
                       <strong>Profile Audit:</strong> Suspended At: {formatDateTime(client.suspendedAt)} | Suspend Reason: {cleanText(client.suspendedReason || "-")} | Reactivated At: {formatDateTime(client.reactivatedAt)} | Reactivation Reason: {cleanText(client.reactivationNote || "-")} | Deactivated At: {formatDateTime(client.deletedAt)} | Deactivation Reason: {cleanText(client.deletionReason || "-")}
                     </div>
-                    <div className="action-row" style={{ marginTop: "12px", flexWrap: "wrap", gap: "10px" }}>
+                    <div className="action-row admin-action-stack" style={{ marginTop: "12px", flexWrap: "wrap", gap: "10px" }}>
                       <button
-                        className="primary-button"
+                        className="primary-button admin-action-button"
                         style={{ background: SUCCESS_GREEN, borderColor: SUCCESS_GREEN, color: "#052e16", minWidth: "172px" }}
                         onClick={() => openAdminModal("reactivate_client", client, { resolutionNote: "" })}
                       >
@@ -4363,7 +4377,7 @@ const submitApplicationReview = async (decision) => {
               <h3 style={{ margin: 0, marginBottom: "4px" }}>Notification Center</h3>
               <p style={{ margin: 0, color: "#cbd5e1", lineHeight: 1.55 }}>
                 Monitor all active job stages here, then handle admin-only actions below.
-              </p></div><button className="ghost-button" onClick={() => setAdminView("dashboard")}>Back to Dashboard</button></div><div className="glass-subcard" style={{ padding: "14px 16px", borderRadius: "16px", marginTop: "0", marginBottom: "10px" }}>
+              </p></div><button className="ghost-button admin-action-button" onClick={() => setAdminView("dashboard")}>Back to Dashboard</button></div><div className="glass-subcard" style={{ padding: "14px 16px", borderRadius: "16px", marginTop: "0", marginBottom: "10px" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", marginBottom: "10px", flexWrap: "wrap" }}>
               <div>
                 <div style={{ color: "#f8fafc", fontWeight: 900, fontSize: "1rem" }}>Operational Quick Actions</div><div style={{ color: "#94a3b8", fontSize: "0.92rem", marginTop: "4px" }}>
@@ -4389,7 +4403,7 @@ const submitApplicationReview = async (decision) => {
                       setAdminView("dashboard");
                       setSuccess(`${item.title} is now highlighted in the main jobs list.`);
                     }}
-                    className="ghost-button"
+                    className="ghost-button admin-action-button"
                     style={{
                       width: "100%",
                       textAlign: "left",
@@ -4413,7 +4427,7 @@ const submitApplicationReview = async (decision) => {
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", flexWrap: "wrap" }}>
                     <div style={{ minWidth: "260px", flex: "1 1 360px" }}>
                       <div style={{ color: item.tone || "#c4b5fd", fontWeight: 900, fontSize: "1rem" }}>{item.title}</div><div style={{ color: "#e2e8f0", marginTop: "8px" }}>{item.detail}</div></div>{item.onClick ? (
-                      <button className="primary-button" onClick={item.onClick}>
+                      <button className="primary-button admin-action-button" onClick={item.onClick}>
                         {item.actionLabel || "Open"}
                       </button>
                     ) : null}</div></div>))}</div>)}</div>) : null}
@@ -4499,7 +4513,7 @@ const submitApplicationReview = async (decision) => {
                           <div style={{ color: "#e2e8f0", lineHeight: 1.6, wordBreak: "break-all", marginBottom: "10px" }}>
                             {app?.homeLocation?.googlePinUrl || app?.googlePinUrl || app?.locationPinUrl}</div><button
                             type="button"
-                            className="ghost-button"
+                            className="ghost-button admin-action-button"
                             onClick={() =>
                               window.open(
                                 app?.homeLocation?.googlePinUrl || app?.googlePinUrl || app?.locationPinUrl,
@@ -4513,9 +4527,9 @@ const submitApplicationReview = async (decision) => {
                         </>
                       ) : (
                         <div style={{ color: "#94a3b8", lineHeight: 1.6 }}>
-                          No saved worker location pin was submitted on this application.</div>)}</div><div className="action-row" style={{ marginTop: "12px", flexWrap: "wrap" }}>
+                          No saved worker location pin was submitted on this application.</div>)}</div><div className="action-row admin-action-stack" style={{ marginTop: "12px", flexWrap: "wrap" }}>
                       <button
-                        className="primary-button"
+                        className="primary-button admin-action-button"
                         style={{ background: SUCCESS_GREEN, borderColor: SUCCESS_GREEN, color: "#052e16" }}
                         onClick={(event) => { event.preventDefault(); event.stopPropagation(); openAdminModal("approve_application", app, { adminReviewNotes: `Welcome to HomeCare. Your application has been approved and your worker access details are ready below.` }); }}
                       >
@@ -4523,14 +4537,14 @@ const submitApplicationReview = async (decision) => {
                       </button>
 
                       <button
-                        className="ghost-button"
+                        className="ghost-button admin-action-button"
                         onClick={(event) => { event.preventDefault(); event.stopPropagation(); openAdminModal("incomplete_application", app, { adminReviewNotes: app?.adminReviewNotes || "Please complete the missing details highlighted below so admin can continue reviewing your application." }); }}
                       >
                         Incomplete Application
                       </button>
 
                       <button
-                        className="ghost-button"
+                        className="ghost-button admin-action-button"
                         onClick={(event) => { event.preventDefault(); event.stopPropagation(); openAdminModal("reject_application", app, { rejectionReason: "" }); }}
                       >
                         Defer / Reject
@@ -4597,12 +4611,12 @@ const submitApplicationReview = async (decision) => {
       </div>
     ) : null}
 
-    <div className="action-row" style={{ marginTop: "18px", flexWrap: "wrap" }}>
-      <button className="primary-button" onClick={submitMyPasswordChange} disabled={isBusy}>
+    <div className="action-row admin-action-stack" style={{ marginTop: "18px", flexWrap: "wrap" }}>
+      <button className="primary-button admin-action-button" onClick={submitMyPasswordChange} disabled={isBusy}>
         {isBusy ? "Saving..." : "Change Password"}
       </button>
       <button
-        className="ghost-button"
+        className="ghost-button admin-action-button"
         onClick={() => {
           setPasswordChangeForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
           setPasswordChangeResult(null);
@@ -4631,8 +4645,8 @@ const submitApplicationReview = async (decision) => {
             />
           </label>
 
-          <div className="action-row" style={{ marginTop: "14px" }}>
-            <button className="primary-button" onClick={submitSuperAdminPanelUnlock}>
+          <div className="action-row admin-action-stack" style={{ marginTop: "14px" }}>
+            <button className="primary-button admin-action-button" onClick={submitSuperAdminPanelUnlock}>
               Open Super Admin Panel
             </button></div></ModalShell>
       ) : null}
@@ -4658,11 +4672,11 @@ const submitApplicationReview = async (decision) => {
             <label className="field field-span-2">
               <span>Super Admin Password Confirmation</span>
               <input type="password" value={adminOperatorForm.adminPassword} onChange={(e) => setAdminOperatorForm((prev) => ({ ...prev, adminPassword: e.target.value }))} />
-            </label></div><div className="action-row" style={{ marginTop: "18px" }}>
-            <button className="primary-button" onClick={submitCreateAdminOperator} disabled={isBusy}>
+            </label></div><div className="action-row admin-action-stack" style={{ marginTop: "18px" }}>
+            <button className="primary-button admin-action-button" onClick={submitCreateAdminOperator} disabled={isBusy}>
               {isBusy ? "Creating..." : "Create Admin Operator"}
             </button>
-            <button className="ghost-button" onClick={resetModal} disabled={isBusy}>
+            <button className="ghost-button admin-action-button" onClick={resetModal} disabled={isBusy}>
               Cancel
             </button></div></ModalShell>
       ) : null}
@@ -4709,11 +4723,11 @@ const submitApplicationReview = async (decision) => {
             />
           </label>
 
-          <div className="action-row" style={{ marginTop: "18px" }}>
-            <button className="primary-button" onClick={submitResetClientPassword} disabled={isBusy}>
+          <div className="action-row admin-action-stack" style={{ marginTop: "18px" }}>
+            <button className="primary-button admin-action-button" onClick={submitResetClientPassword} disabled={isBusy}>
               {isBusy ? "Resetting..." : "Generate New Password"}
             </button>
-            <button className="ghost-button" onClick={resetModal} disabled={isBusy}>
+            <button className="ghost-button admin-action-button" onClick={resetModal} disabled={isBusy}>
               Cancel
             </button>
           </div>
@@ -4732,10 +4746,10 @@ const submitApplicationReview = async (decision) => {
             <FieldRow label="Temporary Password" value={cleanText(clientResetPasswordResult?.temporaryPassword || "-")} valueColor="#fcd34d" />
           </div>
 
-          <div className="action-row" style={{ marginTop: "18px", flexWrap: "wrap" }}>
+          <div className="action-row admin-action-stack" style={{ marginTop: "18px", flexWrap: "wrap" }}>
             <button
               type="button"
-              className="primary-button"
+              className="primary-button admin-action-button"
               style={{ background: CLIENT_BLUE, borderColor: CLIENT_BLUE, color: "#eff6ff" }}
               onClick={() => {
                 const message = [
@@ -4757,7 +4771,7 @@ const submitApplicationReview = async (decision) => {
 
             <button
               type="button"
-              className="ghost-button"
+              className="ghost-button admin-action-button"
               onClick={() => {
                 const subject = encodeURIComponent("HomeCare Client Password Reset");
                 const body = encodeURIComponent([
@@ -4778,13 +4792,13 @@ const submitApplicationReview = async (decision) => {
 
             <button
               type="button"
-              className="ghost-button"
+              className="ghost-button admin-action-button"
               onClick={() => navigator.clipboard.writeText(String(clientResetPasswordResult?.temporaryPassword || ""))}
             >
               Copy Password
             </button>
 
-            <button className="primary-button" onClick={() => setClientResetPasswordResult(null)}>
+            <button className="primary-button admin-action-button" onClick={() => setClientResetPasswordResult(null)}>
               Done
             </button>
           </div>
@@ -4832,11 +4846,11 @@ const submitApplicationReview = async (decision) => {
             />
           </label>
 
-          <div className="action-row" style={{ marginTop: "18px" }}>
-            <button className="primary-button" onClick={submitResetWorkerPassword} disabled={isBusy}>
+          <div className="action-row admin-action-stack" style={{ marginTop: "18px" }}>
+            <button className="primary-button admin-action-button" onClick={submitResetWorkerPassword} disabled={isBusy}>
               {isBusy ? "Resetting..." : "Generate New Password"}
             </button>
-            <button className="ghost-button" onClick={resetModal} disabled={isBusy}>
+            <button className="ghost-button admin-action-button" onClick={resetModal} disabled={isBusy}>
               Cancel
             </button>
           </div>
@@ -4855,10 +4869,10 @@ const submitApplicationReview = async (decision) => {
             <FieldRow label="Temporary Password" value={cleanText(workerResetPasswordResult?.temporaryPassword || "-")} valueColor="#fcd34d" />
           </div>
 
-          <div className="action-row" style={{ marginTop: "18px", flexWrap: "wrap" }}>
+          <div className="action-row admin-action-stack" style={{ marginTop: "18px", flexWrap: "wrap" }}>
             <button
               type="button"
-              className="primary-button"
+              className="primary-button admin-action-button"
               style={{ background: WORKER_ORANGE, borderColor: WORKER_ORANGE, color: "#111827" }}
               onClick={() => {
                 const message = [
@@ -4878,7 +4892,7 @@ const submitApplicationReview = async (decision) => {
 
             <button
               type="button"
-              className="ghost-button"
+              className="ghost-button admin-action-button"
               onClick={() => {
                 const subject = encodeURIComponent("HomeCare Worker Password Reset");
                 const body = encodeURIComponent([
@@ -4897,13 +4911,13 @@ const submitApplicationReview = async (decision) => {
 
             <button
               type="button"
-              className="ghost-button"
+              className="ghost-button admin-action-button"
               onClick={() => navigator.clipboard.writeText(String(workerResetPasswordResult?.temporaryPassword || ""))}
             >
               Copy Password
             </button>
 
-            <button className="primary-button" onClick={() => setWorkerResetPasswordResult(null)}>
+            <button className="primary-button admin-action-button" onClick={() => setWorkerResetPasswordResult(null)}>
               Done
             </button>
           </div>
@@ -4916,11 +4930,11 @@ const submitApplicationReview = async (decision) => {
             <input type="password" value={adminOperatorActionForm.adminPassword} onChange={(e) => setAdminOperatorActionForm((prev) => ({ ...prev, adminPassword: e.target.value }))} />
           </label>
 
-          <div className="action-row" style={{ marginTop: "18px" }}>
-            <button className="primary-button" onClick={submitResetAdminOperatorPassword} disabled={isBusy}>
+          <div className="action-row admin-action-stack" style={{ marginTop: "18px" }}>
+            <button className="primary-button admin-action-button" onClick={submitResetAdminOperatorPassword} disabled={isBusy}>
               {isBusy ? "Resetting..." : "Generate New Password"}
             </button>
-            <button className="ghost-button" onClick={resetModal} disabled={isBusy}>
+            <button className="ghost-button admin-action-button" onClick={resetModal} disabled={isBusy}>
               Cancel
             </button></div></ModalShell>
       ) : null}
@@ -4937,11 +4951,11 @@ const submitApplicationReview = async (decision) => {
             <input type="password" value={adminOperatorActionForm.adminPassword} onChange={(e) => setAdminOperatorActionForm((prev) => ({ ...prev, adminPassword: e.target.value }))} />
           </label>
 
-          <div className="action-row" style={{ marginTop: "18px" }}>
-            <button className="primary-button" onClick={submitDeactivateAdminOperator} disabled={isBusy}>
+          <div className="action-row admin-action-stack" style={{ marginTop: "18px" }}>
+            <button className="primary-button admin-action-button" onClick={submitDeactivateAdminOperator} disabled={isBusy}>
               {isBusy ? "Deactivating..." : "Deactivate Admin"}
             </button>
-            <button className="ghost-button" onClick={resetModal} disabled={isBusy}>
+            <button className="ghost-button admin-action-button" onClick={resetModal} disabled={isBusy}>
               Cancel
             </button></div></ModalShell>
       ) : null}
@@ -4958,11 +4972,11 @@ const submitApplicationReview = async (decision) => {
             <input type="password" value={adminOperatorActionForm.adminPassword} onChange={(e) => setAdminOperatorActionForm((prev) => ({ ...prev, adminPassword: e.target.value }))} />
           </label>
 
-          <div className="action-row" style={{ marginTop: "18px" }}>
-            <button className="primary-button" onClick={submitReactivateAdminOperator} disabled={isBusy}>
+          <div className="action-row admin-action-stack" style={{ marginTop: "18px" }}>
+            <button className="primary-button admin-action-button" onClick={submitReactivateAdminOperator} disabled={isBusy}>
               {isBusy ? "Reactivating..." : "Reactivate Admin"}
             </button>
-            <button className="ghost-button" onClick={resetModal} disabled={isBusy}>
+            <button className="ghost-button admin-action-button" onClick={resetModal} disabled={isBusy}>
               Cancel
             </button></div></ModalShell>
       ) : null}
@@ -5032,11 +5046,11 @@ const submitApplicationReview = async (decision) => {
             </label>
           </div>
 
-          <div className="action-row" style={{ marginTop: "18px", flexWrap: "wrap" }}>
-            <button className="primary-button" onClick={handleSaveProfileOverride} disabled={isSavingOverride}>
+          <div className="action-row admin-action-stack" style={{ marginTop: "18px", flexWrap: "wrap" }}>
+            <button className="primary-button admin-action-button" onClick={handleSaveProfileOverride} disabled={isSavingOverride}>
               {isSavingOverride ? "Saving..." : "Save Client Override"}
             </button>
-            <button className="ghost-button" onClick={resetModal} disabled={isSavingOverride}>
+            <button className="ghost-button admin-action-button" onClick={resetModal} disabled={isSavingOverride}>
               Cancel
             </button>
           </div>
@@ -5165,11 +5179,11 @@ const submitApplicationReview = async (decision) => {
             </label>
           </div>
 
-          <div className="action-row" style={{ marginTop: "18px", flexWrap: "wrap" }}>
-            <button className="primary-button" onClick={handleSaveProfileOverride} disabled={isSavingOverride}>
+          <div className="action-row admin-action-stack" style={{ marginTop: "18px", flexWrap: "wrap" }}>
+            <button className="primary-button admin-action-button" onClick={handleSaveProfileOverride} disabled={isSavingOverride}>
               {isSavingOverride ? "Saving..." : "Save Worker Override"}
             </button>
-            <button className="ghost-button" onClick={resetModal} disabled={isSavingOverride}>
+            <button className="ghost-button admin-action-button" onClick={resetModal} disabled={isSavingOverride}>
               Cancel
             </button>
           </div>
@@ -5195,9 +5209,9 @@ const submitApplicationReview = async (decision) => {
             />
           </label>
 
-          <div className="action-row" style={{ marginTop: "14px" }}>
+          <div className="action-row admin-action-stack" style={{ marginTop: "14px" }}>
             <button
-              className="primary-button"
+              className="primary-button admin-action-button"
               style={{ background: DANGER_RED, borderColor: DANGER_RED, color: "#fff" }}
               onClick={submitDeleteClient}
             >
@@ -5243,13 +5257,13 @@ const submitApplicationReview = async (decision) => {
             }}
           >
             Message preview:<br />
-            {buildApplicationIncompleteMessage(modalState.payload, modalForm.adminReviewNotes || "please review your application details")}</div><div className="action-row" style={{ marginTop: "12px", flexWrap: "wrap" }}>
-            <button className="primary-button" onClick={() => submitApplicationReview("needs_more_info")}>
+            {buildApplicationIncompleteMessage(modalState.payload, modalForm.adminReviewNotes || "please review your application details")}</div><div className="action-row admin-action-stack" style={{ marginTop: "12px", flexWrap: "wrap" }}>
+            <button className="primary-button admin-action-button" onClick={() => submitApplicationReview("needs_more_info")}>
               Save Incomplete Response
             </button>
 
             <button
-              className="ghost-button"
+              className="ghost-button admin-action-button"
               onClick={() => {
                 const app = modalState.payload;
                 const msg = buildApplicationIncompleteMessage(app, modalForm.adminReviewNotes || "please review your application details");
@@ -5261,7 +5275,7 @@ const submitApplicationReview = async (decision) => {
             </button>
 
             <button
-              className="ghost-button"
+              className="ghost-button admin-action-button"
               onClick={() => {
                 const app = modalState.payload;
                 const subject = encodeURIComponent("HomeCare Worker Application - Incomplete Details");
@@ -5284,8 +5298,8 @@ const submitApplicationReview = async (decision) => {
               placeholder="Explain why this application is being rejected or deferred"
             />
           </label>
-          <div className="action-row" style={{ marginTop: "14px" }}>
-            <button className="primary-button" style={{ background: DANGER_RED, borderColor: DANGER_RED }} onClick={() => submitApplicationReview("rejected")}>
+          <div className="action-row admin-action-stack" style={{ marginTop: "14px" }}>
+            <button className="primary-button admin-action-button" style={{ background: DANGER_RED, borderColor: DANGER_RED }} onClick={() => submitApplicationReview("rejected")}>
               Reject Application
             </button></div></ModalShell>
       ) : null}
@@ -5307,8 +5321,8 @@ const submitApplicationReview = async (decision) => {
             />
           </label>
 
-          <div className="action-row" style={{ marginTop: "14px" }}>
-            <button className="primary-button" onClick={submitActivitiesUnlock}>
+          <div className="action-row admin-action-stack" style={{ marginTop: "14px" }}>
+            <button className="primary-button admin-action-button" onClick={submitActivitiesUnlock}>
               Unlock Activities
             </button></div></ModalShell>
       ) : null}
@@ -5329,9 +5343,9 @@ const submitApplicationReview = async (decision) => {
             />
           </label>
 
-          <div className="action-row" style={{ marginTop: "14px" }}>
+          <div className="action-row admin-action-stack" style={{ marginTop: "14px" }}>
             <button
-              className="primary-button"
+              className="primary-button admin-action-button"
               style={{ background: DANGER_RED, borderColor: DANGER_RED, color: "#fff" }}
               onClick={submitSuspendWorker}
             >
@@ -5352,9 +5366,9 @@ const submitApplicationReview = async (decision) => {
             />
           </label>
 
-          <div className="action-row" style={{ marginTop: "14px" }}>
+          <div className="action-row admin-action-stack" style={{ marginTop: "14px" }}>
             <button
-              className="primary-button"
+              className="primary-button admin-action-button"
               style={{ background: SUCCESS_GREEN, borderColor: SUCCESS_GREEN, color: "#052e16" }}
               onClick={submitReactivateWorker}
             >
@@ -5379,9 +5393,9 @@ const submitApplicationReview = async (decision) => {
             />
           </label>
 
-          <div className="action-row" style={{ marginTop: "14px" }}>
+          <div className="action-row admin-action-stack" style={{ marginTop: "14px" }}>
             <button
-              className="primary-button"
+              className="primary-button admin-action-button"
               style={{ background: WARNING_AMBER, borderColor: WARNING_AMBER, color: "#111827" }}
               onClick={submitSuspendClient}
             >
@@ -5406,9 +5420,9 @@ const submitApplicationReview = async (decision) => {
             />
           </label>
 
-          <div className="action-row" style={{ marginTop: "14px" }}>
+          <div className="action-row admin-action-stack" style={{ marginTop: "14px" }}>
             <button
-              className="primary-button"
+              className="primary-button admin-action-button"
               style={{ background: SUCCESS_GREEN, borderColor: SUCCESS_GREEN, color: "#052e16" }}
               onClick={submitReactivateClient}
             >
@@ -5433,9 +5447,9 @@ const submitApplicationReview = async (decision) => {
             />
           </label>
 
-          <div className="action-row" style={{ marginTop: "14px" }}>
+          <div className="action-row admin-action-stack" style={{ marginTop: "14px" }}>
             <button
-              className="primary-button"
+              className="primary-button admin-action-button"
               style={{ background: DANGER_RED, borderColor: DANGER_RED, color: "#fff" }}
               onClick={submitDeleteWorker}
             >
@@ -5467,9 +5481,9 @@ const submitApplicationReview = async (decision) => {
               lineHeight: 1.7
             }}
           >
-            On approval the system will generate a fresh password, create the worker account, and open the approval result card with WhatsApp and Email onboarding options.</div><div className="action-row" style={{ marginTop: "12px" }}>
+            On approval the system will generate a fresh password, create the worker account, and open the approval result card with WhatsApp and Email onboarding options.</div><div className="action-row admin-action-stack" style={{ marginTop: "12px" }}>
             <button
-              className="primary-button"
+              className="primary-button admin-action-button"
               style={{ background: SUCCESS_GREEN, borderColor: SUCCESS_GREEN, color: "#052e16" }}
               onClick={() => submitApplicationReview("approved")}
             >
@@ -5504,10 +5518,10 @@ const submitApplicationReview = async (decision) => {
           </label>
 
           <div style={{ marginTop: "10px", color: "#94a3b8", lineHeight: 1.7 }}>
-            You can share details directly via the registered contacts.</div><div className="action-row" style={{ marginTop: "16px", flexWrap: "wrap" }}>
+            You can share details directly via the registered contacts.</div><div className="action-row admin-action-stack" style={{ marginTop: "16px", flexWrap: "wrap" }}>
             <button
               type="button"
-              className="primary-button"
+              className="primary-button admin-action-button"
               style={{ background: ADMIN_PURPLE, borderColor: ADMIN_PURPLE }}
               onClick={() => {
                 const message = [
@@ -5529,7 +5543,7 @@ const submitApplicationReview = async (decision) => {
 
             <button
               type="button"
-              className="ghost-button"
+              className="ghost-button admin-action-button"
               onClick={() => {
                 const subject = encodeURIComponent("HomeCare Admin Operator Account Details");
                 const body = encodeURIComponent([
@@ -5548,7 +5562,7 @@ const submitApplicationReview = async (decision) => {
               Send Email
             </button>
 
-            <button className="primary-button" onClick={() => setAdminCredentialsResult(null)}>
+            <button className="primary-button admin-action-button" onClick={() => setAdminCredentialsResult(null)}>
               Done
             </button></div></ModalShell>
       ) : null}
@@ -5576,10 +5590,10 @@ const submitApplicationReview = async (decision) => {
           </label>
 
           <div style={{ marginTop: "10px", color: "#94a3b8", lineHeight: 1.7 }}>
-            You can share details directly via the registered contacts.</div><div className="action-row" style={{ marginTop: "16px", flexWrap: "wrap" }}>
+            You can share details directly via the registered contacts.</div><div className="action-row admin-action-stack" style={{ marginTop: "16px", flexWrap: "wrap" }}>
             <button
               type="button"
-              className="primary-button"
+              className="primary-button admin-action-button"
               style={{ background: ADMIN_PURPLE, borderColor: ADMIN_PURPLE }}
               onClick={() => {
                 const message = [
@@ -5599,7 +5613,7 @@ const submitApplicationReview = async (decision) => {
 
             <button
               type="button"
-              className="ghost-button"
+              className="ghost-button admin-action-button"
               onClick={() => {
                 const subject = encodeURIComponent("HomeCare Admin Password Reset");
                 const body = encodeURIComponent([
@@ -5616,7 +5630,7 @@ const submitApplicationReview = async (decision) => {
               Send Email
             </button>
 
-            <button className="primary-button" onClick={() => setResetAdminPasswordResult(null)}>
+            <button className="primary-button admin-action-button" onClick={() => setResetAdminPasswordResult(null)}>
               Done
             </button></div></ModalShell>
       ) : null}
@@ -5640,10 +5654,10 @@ const submitApplicationReview = async (decision) => {
     </label>
 
     <div style={{ marginTop: "14px", color: "#cbd5e1", lineHeight: 1.7 }}>
-      Admin does not store or retain access to autogenerated passwords. The worker should change this password after first login. If forgotten later, the Forgot Password flow should generate a fresh one.</div><div className="action-row" style={{ marginTop: "12px", flexWrap: "wrap" }}>
+      Admin does not store or retain access to autogenerated passwords. The worker should change this password after first login. If forgotten later, the Forgot Password flow should generate a fresh one.</div><div className="action-row admin-action-stack" style={{ marginTop: "12px", flexWrap: "wrap" }}>
       <button
         type="button"
-        className="primary-button"
+        className="primary-button admin-action-button"
         style={{ background: WORKER_ORANGE, borderColor: WORKER_ORANGE, color: "#111827" }}
         onClick={() => {
           const url = getWhatsAppUrl(approvalResult.workerUser?.phone || approvalResult.application?.phone || "", approvalMessage);
@@ -5655,7 +5669,7 @@ const submitApplicationReview = async (decision) => {
 
       <button
         type="button"
-        className="ghost-button"
+        className="ghost-button admin-action-button"
         onClick={() => {
           const subject = encodeURIComponent("Welcome to HomeCare - Worker Account Approved");
           const body = encodeURIComponent(approvalMessage);
@@ -5665,7 +5679,7 @@ const submitApplicationReview = async (decision) => {
         Send Email
       </button>
 
-      <button type="button" className="ghost-button" onClick={closeApprovalResult}>
+      <button type="button" className="ghost-button admin-action-button" onClick={closeApprovalResult}>
         Done - Close Card
       </button></div></ModalShell>
 ) : null}
@@ -5706,16 +5720,16 @@ const submitApplicationReview = async (decision) => {
               />
             </label>
 
-            <div className="action-row" style={{ marginTop: "8px", flexWrap: "wrap" }}>
+            <div className="action-row admin-action-stack" style={{ marginTop: "8px", flexWrap: "wrap" }}>
               <button
-                className="primary-button"
+                className="primary-button admin-action-button"
                 disabled={actingJobId === payWorkerJob._id}
                 onClick={submitPayWorker}
               >
                 {actingJobId === payWorkerJob._id ? "Saving..." : "Confirm Payout"}
               </button>
 
-              <button className="ghost-button" onClick={closePayWorkerModal}>
+              <button className="ghost-button admin-action-button" onClick={closePayWorkerModal}>
                 Cancel
               </button></div></div></ModalShell>
       ) : null}
@@ -5723,6 +5737,9 @@ const submitApplicationReview = async (decision) => {
     </AppShell>
   );
 }
+
+
+
 
 
 

@@ -364,10 +364,12 @@ export default function WorkerDashboardPage() {
 
         .worker-profile-main {
           grid-template-columns: minmax(0, 1fr) !important;
+          gap: 14px !important;
         }
 
         .worker-profile-photo-shell {
           width: 100% !important;
+          min-width: 0 !important;
         }
 
         .worker-profile-photo-shell img {
@@ -376,14 +378,27 @@ export default function WorkerDashboardPage() {
 
         .worker-profile-detail-stack {
           width: 100% !important;
+          min-width: 0 !important;
         }
 
         .worker-profile-detail-stack > div {
           width: 100% !important;
+          min-width: 0 !important;
+          overflow-wrap: anywhere !important;
+          word-break: break-word !important;
         }
 
         .worker-profile-head > div {
           max-width: 100% !important;
+        }
+
+        .action-row {
+          flex-wrap: wrap !important;
+        }
+
+        .action-row > * {
+          width: 100% !important;
+          min-width: 0 !important;
         }
       }
     `;
@@ -1081,6 +1096,54 @@ mpesaNumber: String(profileForm.mpesaNumber || "").trim(),
       </div>
 
       <div style={{ display: "grid", gap: "18px" }}>
+        <div className="glass-card section-card" style={{ padding: "22px 22px 24px", minHeight: "250px" }}>
+          <h3>Quick Availability</h3>
+          <div style={{ marginTop: "6px", marginBottom: "12px", color: "#bfdbfe", fontWeight: 700 }}>Next Availability: {formatWorkerAvailabilityLine(dashboard)}</div>
+          <p style={{ marginBottom: "18px", lineHeight: 1.8, color: "#dbe7f5" }}>
+            Update your live readiness so admin can dispatch jobs correctly. When you are on a live assignment, the system keeps you engaged until release is fully cleared.
+          </p>
+
+          {hasLiveJob ? (
+            <div style={{ marginBottom: "18px", padding: "14px 16px", borderRadius: "14px", background: "rgba(59,130,246,0.16)", border: "1px solid rgba(96,165,250,0.34)", color: "#eff6ff", fontWeight: 600 }}>
+              <div style={{ marginBottom: "6px" }}>You are currently engaged on a live client task. Manual availability switching is locked.</div>
+              <div style={{ color: "#bfdbfe", fontWeight: 700 }}>
+                Open live jobs: {liveJobs.map((job) => cleanText(job.title || "Job")).join(" | ")}
+              </div>
+            </div>
+          ) : (
+            <div style={{ marginBottom: "18px", padding: "14px 16px", borderRadius: "14px", background: "rgba(16,185,129,0.12)", border: "1px solid rgba(74,222,128,0.28)", color: "#dcfce7", fontWeight: 600 }}>
+              No active live job is blocking you. You can choose Available or Unavailable.{scheduledAvailabilityLabel ? (<div style={{ marginTop: "8px", color: "#a7f3d0", fontWeight: 700 }}>Scheduled Availability: {scheduledAvailabilityLabel}</div>) : null}
+            </div>
+          )}
+
+          <div className="action-row" style={{ gap: "12px", flexWrap: "wrap", marginBottom: "18px" }}>
+            <button
+              className="primary-button"
+              style={{ minWidth: "160px", background: "linear-gradient(135deg, rgba(74,222,128,0.95) 0%, rgba(16,185,129,0.95) 100%)", border: "1px solid rgba(74,222,128,0.55)", color: "#052e16", fontWeight: 800 }}
+              onClick={() => handleAvailability("available")}
+              disabled={isSaving || hasLiveJob}
+            >
+              {isSaving ? "Saving..." : "Set Available"}
+            </button>
+
+            <button
+              className="ghost-button"
+              style={{ minWidth: "145px", background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.14)", color: "#e2e8f0" }}
+              onClick={() => handleAvailability("unavailable")}
+              disabled={isSaving || hasLiveJob}
+            >
+              Set Unavailable
+            </button>
+          </div>
+
+          <div className="details-grid" style={{ marginTop: "16px", rowGap: "14px", columnGap: "24px", alignItems: "start" }}>
+            <div><strong style={{ color: "#cbd5e1" }}>Name:</strong> <span style={{ color: "#f8fafc" }}>{cleanText(dashboard?.worker?.fullName || "-")}</span></div>
+            <div><strong style={{ color: "#cbd5e1" }}>Phone:</strong> <span style={{ color: "#f8fafc" }}>{cleanText(dashboard?.worker?.phone || "-")}</span></div>
+            <div><strong style={{ color: "#cbd5e1" }}>Town:</strong> <span style={{ color: "#dbe7f5" }}>{cleanText(dashboard?.profile?.homeLocation?.town || "-")}</span></div>
+            <div><strong style={{ color: "#cbd5e1" }}>Estate:</strong> <span style={{ color: "#dbe7f5" }}>{cleanText(dashboard?.profile?.homeLocation?.estate || "-")}</span></div>
+          </div>
+        </div>
+
         <div className="glass-card section-card" style={{ padding: "22px 22px 24px" }}>
           <div className="section-head worker-profile-head" style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "14px", marginBottom: "16px" }}>
             <div style={{ maxWidth: "78%" }}>
@@ -1230,54 +1293,6 @@ profilePhotoDisplay: {
                 </div>
               ))}
             </div>
-          </div>
-        </div>
-
-        <div className="glass-card section-card" style={{ padding: "22px 22px 24px", minHeight: "250px" }}>
-          <h3>Quick Availability</h3>
-          <div style={{ marginTop: "6px", marginBottom: "12px", color: "#bfdbfe", fontWeight: 700 }}>Next Availability: {formatWorkerAvailabilityLine(dashboard)}</div>
-          <p style={{ marginBottom: "18px", lineHeight: 1.8, color: "#dbe7f5" }}>
-            Update your live readiness so admin can dispatch jobs correctly. When you are on a live assignment, the system keeps you engaged until release is fully cleared.
-          </p>
-
-          {hasLiveJob ? (
-            <div style={{ marginBottom: "18px", padding: "14px 16px", borderRadius: "14px", background: "rgba(59,130,246,0.16)", border: "1px solid rgba(96,165,250,0.34)", color: "#eff6ff", fontWeight: 600 }}>
-              <div style={{ marginBottom: "6px" }}>You are currently engaged on a live client task. Manual availability switching is locked.</div>
-              <div style={{ color: "#bfdbfe", fontWeight: 700 }}>
-                Open live jobs: {liveJobs.map((job) => cleanText(job.title || "Job")).join(" | ")}
-              </div>
-            </div>
-          ) : (
-            <div style={{ marginBottom: "18px", padding: "14px 16px", borderRadius: "14px", background: "rgba(16,185,129,0.12)", border: "1px solid rgba(74,222,128,0.28)", color: "#dcfce7", fontWeight: 600 }}>
-              No active live job is blocking you. You can choose Available or Unavailable.{scheduledAvailabilityLabel ? (<div style={{ marginTop: "8px", color: "#a7f3d0", fontWeight: 700 }}>Scheduled Availability: {scheduledAvailabilityLabel}</div>) : null}
-            </div>
-          )}
-
-          <div className="action-row" style={{ gap: "12px", flexWrap: "wrap", marginBottom: "18px" }}>
-            <button
-              className="primary-button"
-              style={{ minWidth: "160px", background: "linear-gradient(135deg, rgba(74,222,128,0.95) 0%, rgba(16,185,129,0.95) 100%)", border: "1px solid rgba(74,222,128,0.55)", color: "#052e16", fontWeight: 800 }}
-              onClick={() => handleAvailability("available")}
-              disabled={isSaving || hasLiveJob}
-            >
-              {isSaving ? "Saving..." : "Set Available"}
-            </button>
-
-            <button
-              className="ghost-button"
-              style={{ minWidth: "145px", background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.14)", color: "#e2e8f0" }}
-              onClick={() => handleAvailability("unavailable")}
-              disabled={isSaving || hasLiveJob}
-            >
-              Set Unavailable
-            </button>
-          </div>
-
-          <div className="details-grid" style={{ marginTop: "16px", rowGap: "14px", columnGap: "24px", alignItems: "start" }}>
-            <div><strong style={{ color: "#cbd5e1" }}>Name:</strong> <span style={{ color: "#f8fafc" }}>{cleanText(dashboard?.worker?.fullName || "-")}</span></div>
-            <div><strong style={{ color: "#cbd5e1" }}>Phone:</strong> <span style={{ color: "#f8fafc" }}>{cleanText(dashboard?.worker?.phone || "-")}</span></div>
-            <div><strong style={{ color: "#cbd5e1" }}>Town:</strong> <span style={{ color: "#dbe7f5" }}>{cleanText(dashboard?.profile?.homeLocation?.town || "-")}</span></div>
-            <div><strong style={{ color: "#cbd5e1" }}>Estate:</strong> <span style={{ color: "#dbe7f5" }}>{cleanText(dashboard?.profile?.homeLocation?.estate || "-")}</span></div>
           </div>
         </div>
 

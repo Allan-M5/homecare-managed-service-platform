@@ -45,7 +45,7 @@ export default function AppRouter() {
         <Route path="/worker" element={<WorkerDashboardPage />} />
       </Route>
 
-      <Route path="*" element={<NotFoundPage />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }
