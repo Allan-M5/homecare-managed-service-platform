@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { http } from "../api/http";
 
@@ -127,6 +127,19 @@ export default function ApplyWorkerPage() {
           grid-template-columns: minmax(0, 1fr) !important;
         }
 
+        .apply-worker-form-grid > *,
+        .form-grid > *,
+        .details-grid > * {
+          min-width: 0 !important;
+          width: 100% !important;
+        }
+
+        .field {
+          min-width: 0 !important;
+          width: 100% !important;
+          overflow: hidden !important;
+        }
+
         input,
         textarea,
         select {
@@ -141,6 +154,10 @@ export default function ApplyWorkerPage() {
         input[type="datetime-local"] {
           width: 100% !important;
           min-width: 0 !important;
+          max-width: 100% !important;
+          display: block !important;
+          -webkit-appearance: none !important;
+          appearance: none !important;
         }
       }
     `;
@@ -600,7 +617,7 @@ export default function ApplyWorkerPage() {
             </div>
           </section>
 
-          <div style={{ marginTop: "18px", textAlign: "center", color: "#f8d7a0", fontSize: "13px" }}>Swipe left to continue to worker application</div>
+          
         </div>
       ) : (
         <div

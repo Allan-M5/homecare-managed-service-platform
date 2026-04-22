@@ -424,6 +424,33 @@ export default function ClientDashboardPage() {
           width: 100% !important;
           min-width: 0 !important;
         }
+
+        .form-grid,
+        .details-grid {
+          grid-template-columns: minmax(0, 1fr) !important;
+        }
+
+        .form-grid > *,
+        .details-grid > * {
+          min-width: 0 !important;
+          width: 100% !important;
+        }
+
+        .field {
+          min-width: 0 !important;
+          width: 100% !important;
+          overflow: hidden !important;
+        }
+
+        input[type="datetime-local"] {
+          width: 100% !important;
+          min-width: 0 !important;
+          max-width: 100% !important;
+          display: block !important;
+          box-sizing: border-box !important;
+          -webkit-appearance: none !important;
+          appearance: none !important;
+        }
       }
     `;
     document.head.appendChild(style);
@@ -1385,6 +1412,7 @@ export default function ClientDashboardPage() {
     <AppShell
       title={null}
       subtitle={null}
+      hideMainHeader
       sidebarExtra={sidebarExtra}
       hideSidebarLogoutButton
     >

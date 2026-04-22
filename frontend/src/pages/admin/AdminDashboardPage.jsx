@@ -3657,13 +3657,27 @@ const submitApplicationReview = async (decision) => {
                           </button>
                         ) : null}
 
-                        {workerWhatsappUrl ? (
+                        {job?.assignedWorker?.email ? (
                           <button
-                            className="primary-button admin-action-button"
-                            style={{ background: WORKER_ORANGE, borderColor: WORKER_ORANGE, color: "#111827" }}
-                            onClick={() => window.open(workerWhatsappUrl, "_blank", "noopener,noreferrer")}
+                            className="ghost-button admin-action-button"
+                            style={{ borderColor: "rgba(148,163,184,0.28)", color: "#e2e8f0" }}
+                            onClick={() =>
+                              window.open(
+                                getGmailComposeUrl(
+                                  job?.assignedWorker?.email || "",
+                                  `HomeCare Admin - ${cleanText(job?.title || "Assigned Job")}`,
+                                  `Hello ${cleanText(job?.assignedWorker?.fullName || "Worker")},
+
+This is HomeCare admin regarding job: ${cleanText(job?.title || "")}.
+
+Please check your dashboard for the latest instructions.`
+                                ),
+                                "_blank",
+                                "noopener,noreferrer"
+                              )
+                            }
                           >
-                            WhatsApp Worker
+                            Email Worker
                           </button>
                         ) : null}
 
@@ -3912,7 +3926,22 @@ const submitApplicationReview = async (decision) => {
                     <div style={{ color, fontWeight: 800, marginBottom: "6px" }}>{label}</div>{isServices ? (
                       <ServiceSummaryBlock services={value} />
                     ) : (
-                      <div style={{ color: "#f8fafc", fontWeight: 700, lineHeight: 1.7 }}>{value}</div>)}</div>))}</div>{renderWorkerApplicationSnapshot(worker)}
+                      <div style={{ color: "#f8fafc", fontWeight: 700, lineHeight: 1.7 }}>{value}</div>)}</div>))}</div>
+                <div
+                  style={{
+                    padding: "12px 14px",
+                    borderRadius: "14px",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                    background: "linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(148,163,184,0.03) 100%)"
+                  }}
+                >
+                  <div style={{ color: "#22d3ee", fontWeight: 800, marginBottom: "6px" }}>Payment Details</div>
+                  <div style={{ color: "#f8fafc", fontWeight: 700, lineHeight: 1.7 }}>
+                    {`M-Pesa: ${cleanText(worker?.profile?.mpesaNumber || worker?.applicationRecord?.mpesaNumber || "-")} | Registered Name: ${cleanText(worker?.profile?.mpesaRegisteredName || worker?.applicationRecord?.mpesaRegisteredName || "-")} | Bank / Account: ${cleanText(worker?.profile?.bankAccountDetails || worker?.applicationRecord?.bankAccountDetails || worker?.profile?.bankAccountNumber || worker?.applicationRecord?.bankAccountNumber || "n/a")}`}
+                  </div>
+                </div>
+
+{renderWorkerApplicationSnapshot(worker)}
               {renderWorkerUploadCards(worker)}
 
               <div style={{ marginTop: "14px", display: "grid", gap: "10px" }}>
@@ -3943,7 +3972,7 @@ const submitApplicationReview = async (decision) => {
                       className="primary-button admin-action-button"
                       style={{ background: WORKER_ORANGE, borderColor: WORKER_ORANGE, color: "#111827", minWidth: "170px" }}
                       onClick={() => window.open(getWhatsAppUrl(worker.phone), "_blank", "noopener,noreferrer")}
-                    >WhatsApp Worker</button>
+                    >Email Worker</button>
                   ) : null}
 
                   {worker.email ? (
@@ -4551,6 +4580,89 @@ const submitApplicationReview = async (decision) => {
                       </button></div>{cleanText(app.adminReviewNotes || "") !== "-" ? (
                       <div style={{ marginTop: "14px", color: "#fcd34d", fontWeight: 700 }}>
                         Latest Review Note: {cleanText(app.adminReviewNotes)}</div>) : null}</div>))}</div>)}</div></div>) : null}
+
+      {adminView === "super_admin_management" ? (
+        <div className="glass-card section-card" style={{ padding: "18px 20px", borderRadius: "22px" }}>
+          <div className="section-head" style={{ marginBottom: "10px", alignItems: "flex-start" }}>
+            <div>
+              <h3 style={{ margin: 0, marginBottom: "6px" }}>Super Admin Management</h3>
+              <p style={{ margin: 0, color: "#cbd5e1", lineHeight: 1.65 }}>
+                Create, reset, deactivate, and reactivate admin operators with full super-admin approval.
+              </p>
+            </div>
+            <button
+              className="primary-button admin-action-button"
+              onClick={() => {
+                setAdminOperatorForm({ fullName: "", phone: "", email: "", adminPassword: "" });
+                setModalState({ open: true, type: "create_admin_operator", payload: null });
+              }}
+            >
+              Create Admin Operator
+            </button>
+          </div>
+
+          <div className="card-stack" style={{ gap: "12px" }}>
+            {adminAccounts.length === 0 ? (
+              <EmptyState
+                title="No admin operators found"
+                text="Create the first admin operator here. This area is reserved for super admin actions only."
+              />
+            ) : (
+              adminAccounts.map((admin) => (
+                <div key={admin._id || admin.id || admin.email} className="glass-subcard" style={{ padding: "16px", borderRadius: "18px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: "14px", flexWrap: "wrap", alignItems: "flex-start" }}>
+                    <div style={{ minWidth: "260px", flex: "1 1 360px" }}>
+                      <div style={{ color: "#f8fafc", fontWeight: 900, fontSize: "1.08rem" }}>{cleanText(admin.fullName || admin.name || "Admin Operator")}</div>
+                      <div style={{ color: "#cbd5e1", marginTop: "6px" }}>{cleanText(admin.phone || "-")}</div>
+                      <div style={{ color: "#cbd5e1", marginTop: "4px" }}>{cleanText(admin.email || "-")}</div>
+                      <div style={{ color: String(admin.isActive) === "false" ? "#fca5a5" : "#86efac", fontWeight: 800, marginTop: "8px" }}>
+                        Status: {String(admin.isActive) === "false" ? "deactivated" : "active"}
+                      </div>
+                    </div>
+
+                    <div className="action-row admin-action-stack" style={{ gap: "10px", flexWrap: "wrap", minWidth: "260px" }}>
+                      <button
+                        className="ghost-button admin-action-button"
+                        onClick={() => {
+                          setAdminOperatorActionForm({ adminPassword: "", reason: "", note: "" });
+                          setModalState({ open: true, type: "reset_admin_password", payload: admin });
+                        }}
+                      >
+                        Reset Password
+                      </button>
+
+                      {String(admin.isActive) === "false" ? (
+                        <button
+                          className="primary-button admin-action-button"
+                          style={{ background: "#22c55e", borderColor: "#22c55e", color: "#052e16" }}
+                          onClick={() => {
+                            setAdminOperatorActionForm({ adminPassword: "", reason: "", note: "" });
+                            setModalState({ open: true, type: "reactivate_admin", payload: admin });
+                          }}
+                        >
+                          Reactivate Admin
+                        </button>
+                      ) : (
+                        <button
+                          className="primary-button admin-action-button"
+                          style={{ background: "#ef4444", borderColor: "#ef4444", color: "#fff" }}
+                          onClick={() => {
+                            setAdminOperatorActionForm({ adminPassword: "", reason: "", note: "" });
+                            setModalState({ open: true, type: "deactivate_admin", payload: admin });
+                          }}
+                        >
+                          Deactivate Admin
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      ) : null}
+
 {adminView === "my_password" ? (
   <div className="glass-card section-card" style={{ padding: "18px 20px", borderRadius: "22px" }}>
     <h3 style={{ marginBottom: "10px" }}>Change My Password</h3>
