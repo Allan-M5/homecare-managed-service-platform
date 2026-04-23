@@ -11,7 +11,16 @@ import { generateBase32Secret, generateTotpOtpauthUrl, verifyTotp } from "../uti
 import { sendTemporaryPasswordEmail } from "../utils/email.js";
 
 const buildAuthResponse = async (user) => {
-  const safeUser = await User.findById(user._id).select("-password -totpSecret").lean();
+  const safeUser = user && typeof user.toObject === "function"
+    ? user.toObject()
+    : { ...(user || {}) };
+
+  delete safeUser.password;
+  delete safeUser.totpSecret;
+
+  if (!safeUser._id) {
+    throw new AppError("Unable to build auth response.", 500);
+  }
 
   let profile = null;
 
@@ -189,7 +198,9 @@ export const loginUser = asyncHandler(async (req, res) => {
   }
 
   user.lastLoginAt = new Date();
-  await user.save();
+  user.save().catch((error) => {
+    console.error("Failed to persist lastLoginAt:", error.message);
+  });
 
   return sendSuccess(res, {
     message: "Sign in successful.",
