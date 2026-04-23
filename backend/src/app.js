@@ -18,9 +18,24 @@ import profileManagementRoutes from "./routes/profileManagementRoutes.js";
 
 const app = express();
 
+const allowedOrigins = new Set([
+  env.FRONTEND_URL,
+  "https://homecare-frontend.onrender.com",
+  "http://localhost:5173",
+  "http://localhost:5000",
+  "http://localhost",
+  "capacitor://localhost",
+  "ionic://localhost"
+]);
+
 app.use(
   cors({
-    origin: env.FRONTEND_URL,
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.has(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error(`CORS blocked for origin: ${origin}`));
+    },
     credentials: true
   })
 );
