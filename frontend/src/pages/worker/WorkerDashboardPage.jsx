@@ -722,8 +722,8 @@ export default function WorkerDashboardPage() {
         }
 
         payload = {
-          status: "available",
-          reason: "Scheduled future availability.",
+          status: "unavailable",
+          reason: "Worker is unavailable now and will become available at the selected time.",
           availableAt: new Date(availabilityDateTime).toISOString()
         };
       } else if (availabilityTarget === "unavailable" && availabilityMode === "immediate") {
@@ -760,9 +760,11 @@ export default function WorkerDashboardPage() {
       setAvailabilityDateTime("");
       setAvailabilityMode("immediate");
       setSuccessMessage(
-        payload.status === "available"
-          ? (payload.availableAt ? "Availability saved. Admin will see when you become available." : "You are now marked as available for dispatch.")
-          : (payload.availableAt ? "Unavailable window saved. Admin will see when you become available again." : "You are now marked as unavailable.")
+        response.data.availability?.status === "unavailable" && response.data.availability?.availableAt
+          ? `Unavailable until ${formatDateTime(response.data.availability.availableAt)}. Admin will see your scheduled return time.`
+          : response.data.availability?.status === "available"
+            ? "You are now marked as available for dispatch."
+            : "Availability updated successfully."
       );
     } catch (err) {
       setError(err?.response?.data?.message || "Could not update availability.");
