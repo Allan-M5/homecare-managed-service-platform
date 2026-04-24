@@ -746,23 +746,27 @@ export default function WorkerDashboardPage() {
       }
 
       const response = await updateWorkerAvailabilityRequest(payload);
+      const updatedProfile = response?.data?.data || response?.data || response;
+      const updatedAvailability = updatedProfile?.availability || {};
 
       setDashboard((current) => ({
         ...current,
-        profile: response.data,
+        profile: updatedProfile,
         summary: {
-          ...current.summary,
-          availabilityStatus: response.data.availability?.status || payload.status
+          ...(current?.summary || {}),
+          availabilityStatus: updatedAvailability.status || payload.status
         }
       }));
+
+      await loadDashboard();
 
       setShowAvailabilityModal(false);
       setAvailabilityDateTime("");
       setAvailabilityMode("immediate");
       setSuccessMessage(
-        response.data.availability?.status === "unavailable" && response.data.availability?.availableAt
-          ? `Unavailable until ${formatDateTime(response.data.availability.availableAt)}. Admin will see your scheduled return time.`
-          : response.data.availability?.status === "available"
+        updatedAvailability.status === "unavailable" && updatedAvailability.availableAt
+          ? `Unavailable until ${formatDateTime(updatedAvailability.availableAt)}. Admin will see your scheduled return time.`
+          : updatedAvailability.status === "available"
             ? "You are now marked as available for dispatch."
             : "Availability updated successfully."
       );
