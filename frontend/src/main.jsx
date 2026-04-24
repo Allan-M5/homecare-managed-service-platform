@@ -14,12 +14,24 @@ ReactDOM.createRoot(document.getElementById("root")).render(
 );
 
 
-document.addEventListener("click", () => {
-  clickSound.init();
-}, { once: true });
+const SOUND_SELECTOR = "button, .nav-link, [role='button'], a, input[type=\"submit\"], input[type=\"button\"]";
 
-document.addEventListener("mousedown", (event) => {
-  const target = event.target.closest("button, .nav-link, [role='button']");
+const ensureSoundReady = () => {
+  clickSound.init();
+};
+
+document.addEventListener("pointerdown", ensureSoundReady, { once: true });
+document.addEventListener("keydown", ensureSoundReady, { once: true });
+
+document.addEventListener("pointerdown", (event) => {
+  const target = event.target.closest(SOUND_SELECTOR);
+  if (!target) return;
+  clickSound.play();
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter" && event.key !== " ") return;
+  const target = event.target.closest(SOUND_SELECTOR);
   if (!target) return;
   clickSound.play();
 });

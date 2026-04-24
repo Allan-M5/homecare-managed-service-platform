@@ -5376,7 +5376,7 @@ Please check your dashboard for the latest instructions.`
           onClose={resetModal}
         >
           <p style={{ color: "#fecaca", marginBottom: "12px", fontWeight: 700 }}>
-            This removes the client from the active directory and marks the account as deleted.
+            This deactivates the client account, removes it from the active client directory, and keeps it under deactivated clients for admin control.
           </p>
 
           <label className="field">
@@ -5385,7 +5385,7 @@ Please check your dashboard for the latest instructions.`
               rows="4"
               value={modalForm.reason}
               onChange={(e) => setModalForm((prev) => ({ ...prev, reason: e.target.value }))}
-              placeholder="State clearly why this client account is being removed"
+              placeholder="State clearly why this client account is being deactivated"
             />
           </label>
 
@@ -5395,7 +5395,7 @@ Please check your dashboard for the latest instructions.`
               style={{ background: DANGER_RED, borderColor: DANGER_RED, color: "#fff" }}
               onClick={submitDeleteClient}
             >
-              Delete Client Account
+              Deactivate Client Account
             </button></div></ModalShell>
       ) : null}
 
@@ -5917,6 +5917,7 @@ Please check your dashboard for the latest instructions.`
     </AppShell>
   );
 }
+
 
 
 

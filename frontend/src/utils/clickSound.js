@@ -3,6 +3,8 @@ class SoundManager {
     this.context = null;
     this.initialized = false;
     this.enabled = true;
+    this.lastPlayedAt = 0;
+    this.cooldownMs = 55;
   }
 
   init() {
@@ -19,6 +21,11 @@ class SoundManager {
 
   play() {
     if (!this.enabled || typeof window === "undefined") return;
+
+    const now = Date.now();
+    if (now - this.lastPlayedAt < this.cooldownMs) return;
+    this.lastPlayedAt = now;
+
     this.init();
     if (!this.context) return;
 
