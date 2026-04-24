@@ -110,7 +110,7 @@ function getWorkerAcceptedAmount(job = {}) {
 }
 
 function formatWorkerAvailabilityLine(dashboard) {
-  const availability = dashboard?.availability || dashboard?.worker?.availability || dashboard?.profile?.availability || {};
+  const availability = dashboard?.profile?.availability || {};
   const status = String(availability?.status || dashboard?.summary?.availabilityStatus || "").toLowerCase();
 
   const formatDateLabel = (value) => {
