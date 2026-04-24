@@ -111,20 +111,33 @@ function getWorkerAcceptedAmount(job = {}) {
 
 function formatWorkerAvailabilityLine(dashboard) {
   const availability = dashboard?.availability || dashboard?.worker?.availability || dashboard?.profile?.availability || {};
-  const status = String(availability?.status || dashboard?.summary?.availabilityStatus || '').toLowerCase();
-  const availableAt = availability?.availableAt || dashboard?.worker?.availableAt || dashboard?.profile?.availableAt || null;
-  if (!availableAt) return '-';
-  const date = new Date(availableAt);
-  if (Number.isNaN(date.getTime())) return '-';
-  const now = new Date();
-  const sameDay = date.toDateString() === now.toDateString();
-  const tomorrow = new Date(now); tomorrow.setDate(now.getDate() + 1);
-  const isTomorrow = date.toDateString() === tomorrow.toDateString();
-  const dayLabel = sameDay ? 'today' : (isTomorrow ? 'tomorrow' : date.toLocaleDateString());
-  const timeLabel = date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-  if (status === 'available') return `Available from ${dayLabel} at ${timeLabel}`;
-  if (status === 'unavailable') return `Unavailable until ${dayLabel} at ${timeLabel}`;
-  return `${dayLabel} at ${timeLabel}`;
+  const status = String(availability?.status || dashboard?.summary?.availabilityStatus || "").toLowerCase();
+
+  const formatDateLabel = (value) => {
+    if (!value) return "";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+    const now = new Date();
+    const tomorrow = new Date(now);
+    tomorrow.setDate(now.getDate() + 1);
+    const dayLabel = date.toDateString() === now.toDateString()
+      ? "today"
+      : (date.toDateString() === tomorrow.toDateString() ? "tomorrow" : date.toLocaleDateString());
+    return `${dayLabel} at ${date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`;
+  };
+
+  if (availability?.repeatDaily) {
+    const nextSwitch = formatDateLabel(availability?.nextSwitchAt || availability?.availableAt);
+    if (status === "unavailable") return nextSwitch ? `Unavailable now, available ${nextSwitch}` : `Unavailable now. Daily return: ${availability.availableFromTime || "-"}`;
+    if (status === "available") return availability.unavailableFromTime ? `Available now, unavailable daily from ${availability.unavailableFromTime}` : "Available now";
+  }
+
+  const availableAt = availability?.availableAt || null;
+  const label = formatDateLabel(availableAt);
+  if (!label) return "-";
+  if (status === "available") return `Available from ${label}`;
+  if (status === "unavailable") return `Unavailable until ${label}`;
+  return label;
 }
 
 function resolveWorkerStage(job) {
@@ -447,6 +460,9 @@ export default function WorkerDashboardPage() {
   const [availabilityTarget, setAvailabilityTarget] = useState("available");
   const [availabilityMode, setAvailabilityMode] = useState("immediate");
   const [availabilityDateTime, setAvailabilityDateTime] = useState("");
+  const [availabilityRepeatDaily, setAvailabilityRepeatDaily] = useState(false);
+  const [availabilityUnavailableTime, setAvailabilityUnavailableTime] = useState("19:00");
+  const [availabilityAvailableTime, setAvailabilityAvailableTime] = useState("06:00");
   const [showResetPasswordModal, setShowResetPasswordModal] = useState(false);
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
   const [showProfilePhotoModal, setShowProfilePhotoModal] = useState(false);
@@ -661,6 +677,9 @@ export default function WorkerDashboardPage() {
     setAvailabilityTarget(status);
     setAvailabilityMode("immediate");
     setAvailabilityDateTime("");
+    setAvailabilityRepeatDaily(false);
+    setAvailabilityUnavailableTime(dashboard?.profile?.availability?.unavailableFromTime || "19:00");
+    setAvailabilityAvailableTime(dashboard?.profile?.availability?.availableFromTime || "06:00");
     setShowAvailabilityModal(true);
   };
 
@@ -676,7 +695,21 @@ export default function WorkerDashboardPage() {
     try {
       let payload;
 
-      if (availabilityTarget === "available" && availabilityMode === "immediate") {
+      if (availabilityRepeatDaily) {
+        if (!availabilityUnavailableTime || !availabilityAvailableTime) {
+          setError("Please set both daily unavailable and available times.");
+          setIsSaving(false);
+          return;
+        }
+
+        payload = {
+          status: "available",
+          reason: "Daily availability schedule saved.",
+          repeatDaily: true,
+          unavailableFromTime: availabilityUnavailableTime,
+          availableFromTime: availabilityAvailableTime
+        };
+      } else if (availabilityTarget === "available" && availabilityMode === "immediate") {
         payload = {
           status: "available",
           reason: "Ready for assignments."
@@ -1616,6 +1649,27 @@ profilePhotoDisplay: {
               </label>
             ) : null}
 
+            <label className="field" style={{ display: "block", marginBottom: "12px" }}>
+              <span>Repeat same daily schedule</span>
+              <select value={availabilityRepeatDaily ? "yes" : "no"} onChange={(e) => setAvailabilityRepeatDaily(e.target.value === "yes")}>
+                <option value="no">No - one-time setting</option>
+                <option value="yes">Yes - repeat daily</option>
+              </select>
+            </label>
+
+            {availabilityRepeatDaily ? (
+              <div className="details-grid" style={{ gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "12px", marginBottom: "12px" }}>
+                <label className="field" style={{ display: "block" }}>
+                  <span>Unavailable daily from</span>
+                  <input type="time" value={availabilityUnavailableTime} onChange={(e) => setAvailabilityUnavailableTime(e.target.value)} />
+                </label>
+                <label className="field" style={{ display: "block" }}>
+                  <span>Available daily from</span>
+                  <input type="time" value={availabilityAvailableTime} onChange={(e) => setAvailabilityAvailableTime(e.target.value)} />
+                </label>
+              </div>
+            ) : null}
+
             <div className="action-row">
               <button className="primary-button" disabled={isSaving} onClick={handleConfirmAvailability}>
                 {isSaving ? "Saving..." : "Save and Close"}
@@ -1627,6 +1681,7 @@ profilePhotoDisplay: {
                   setShowAvailabilityModal(false);
                   setAvailabilityMode("immediate");
                   setAvailabilityDateTime("");
+                  setAvailabilityRepeatDaily(false);
                 }}
               >
                 Cancel

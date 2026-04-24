@@ -74,6 +74,24 @@ const availabilitySchema = new mongoose.Schema(
     autoSwitch: {
       type: Boolean,
       default: false
+    },
+    repeatDaily: {
+      type: Boolean,
+      default: false
+    },
+    unavailableFromTime: {
+      type: String,
+      trim: true,
+      default: ""
+    },
+    availableFromTime: {
+      type: String,
+      trim: true,
+      default: ""
+    },
+    nextSwitchAt: {
+      type: Date,
+      default: null
     }
   },
   { _id: false }

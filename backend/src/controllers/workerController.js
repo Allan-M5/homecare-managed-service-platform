@@ -17,6 +17,62 @@ const getWorkerProfileOrThrow = async (userId) => {
   return profile;
 };
 
+const minutesFromTime = (value = "") => {
+  const match = String(value || "").match(/^(\d{2}):(\d{2})$/);
+  if (!match) return null;
+  return Number(match[1]) * 60 + Number(match[2]);
+};
+
+const buildDailySwitchDate = (timeValue, baseDate = new Date()) => {
+  const minutes = minutesFromTime(timeValue);
+  if (minutes === null) return null;
+  const next = new Date(baseDate);
+  next.setHours(Math.floor(minutes / 60), minutes % 60, 0, 0);
+  if (next.getTime() <= baseDate.getTime()) next.setDate(next.getDate() + 1);
+  return next;
+};
+
+const computeDailyAvailability = (availability = {}) => {
+  if (!availability?.repeatDaily) return availability;
+
+  const unavailableMinutes = minutesFromTime(availability.unavailableFromTime);
+  const availableMinutes = minutesFromTime(availability.availableFromTime);
+
+  if (unavailableMinutes === null || availableMinutes === null) return availability;
+
+  const now = new Date();
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+
+  let isUnavailableNow;
+  if (unavailableMinutes < availableMinutes) {
+    isUnavailableNow = nowMinutes >= unavailableMinutes && nowMinutes < availableMinutes;
+  } else {
+    isUnavailableNow = nowMinutes >= unavailableMinutes || nowMinutes < availableMinutes;
+  }
+
+  const status = isUnavailableNow ? "unavailable" : "available";
+  const nextSwitchAt = buildDailySwitchDate(
+    isUnavailableNow ? availability.availableFromTime : availability.unavailableFromTime,
+    now
+  );
+
+  return {
+    ...availability,
+    status,
+    reason: isUnavailableNow
+      ? "Daily schedule: worker is unavailable during this window."
+      : "Daily schedule: worker is available during this window.",
+    nextSwitchAt,
+    availableAt: isUnavailableNow ? nextSwitchAt : null,
+    autoSwitch: false
+  };
+};
+
+const applyComputedAvailabilityToProfileObject = (profile = {}) => ({
+  ...profile,
+  availability: computeDailyAvailability(profile.availability || {})
+});
+
 const refreshScheduledAvailabilityIfDue = async (userId) => {
   const profile = await WorkerProfile.findOne({ userId });
   if (!profile) {
@@ -39,7 +95,7 @@ const refreshScheduledAvailabilityIfDue = async (userId) => {
     await profile.save({ validateModifiedOnly: true });
   }
 
-  return profile.toObject();
+  return applyComputedAvailabilityToProfileObject(profile.toObject());
 };
 
 const refreshAllDueWorkerAvailability = async () => {
@@ -136,7 +192,7 @@ export const updateWorkerAvailability = asyncHandler(async (req, res) => {
     throw new AppError("Only workers can update availability.", 403);
   }
 
-  const { status, reason = "", availableAt = null } = req.body;
+  const { status, reason = "", availableAt = null, repeatDaily = false, unavailableFromTime = "", availableFromTime = "" } = req.body;
 
   if (!status || !WORKER_AVAILABILITY_STATUS_VALUES.includes(status)) {
     throw new AppError("Invalid worker availability status.", 400);
@@ -166,7 +222,11 @@ export const updateWorkerAvailability = asyncHandler(async (req, res) => {
           reason: effectiveReason,
           updatedAt: new Date(),
           availableAt: hasFutureTime ? futureTime : null,
-          autoSwitch: !!hasFutureTime
+          autoSwitch: !!hasFutureTime,
+          repeatDaily: Boolean(repeatDaily),
+          unavailableFromTime: repeatDaily ? String(unavailableFromTime || "").trim() : "",
+          availableFromTime: repeatDaily ? String(availableFromTime || "").trim() : "",
+          nextSwitchAt: null
         },
         lastSeenAt: new Date()
       }
@@ -182,7 +242,7 @@ export const updateWorkerAvailability = asyncHandler(async (req, res) => {
 
   return sendSuccess(res, {
     message: "Worker availability updated successfully.",
-    data: updatedProfile
+    data: applyComputedAvailabilityToProfileObject(updatedProfile)
   });
 });
 
@@ -241,12 +301,15 @@ export const getAvailableWorkers = asyncHandler(async (req, res) => {
 
   const { jobId = "" } = req.query;
 
-  const workers = await WorkerProfile.find({
-    accountStatus: "active",
-    "availability.status": "available"
+  const workersRaw = await WorkerProfile.find({
+    accountStatus: "active"
   })
     .populate("userId", "fullName phone email")
     .lean();
+
+  const workers = workersRaw
+    .map(applyComputedAvailabilityToProfileObject)
+    .filter((worker) => worker.availability?.status === "available");
 
   let rankedWorkers = workers.map((worker) => ({
     ...worker,

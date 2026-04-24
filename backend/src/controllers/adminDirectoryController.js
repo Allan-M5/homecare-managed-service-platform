@@ -34,6 +34,52 @@ const mergeDirectoryLocation = (primary = {}, fallback = {}) => ({
     : String(fallback?.googlePlaceId || "").trim()
 });
 
+const minutesFromTime = (value = "") => {
+  const match = String(value || "").match(/^(\d{2}):(\d{2})$/);
+  if (!match) return null;
+  return Number(match[1]) * 60 + Number(match[2]);
+};
+
+const buildDailySwitchDate = (timeValue, baseDate = new Date()) => {
+  const minutes = minutesFromTime(timeValue);
+  if (minutes === null) return null;
+  const next = new Date(baseDate);
+  next.setHours(Math.floor(minutes / 60), minutes % 60, 0, 0);
+  if (next.getTime() <= baseDate.getTime()) next.setDate(next.getDate() + 1);
+  return next;
+};
+
+const computeDirectoryAvailability = (availability = {}) => {
+  if (!availability?.repeatDaily) return availability;
+
+  const unavailableMinutes = minutesFromTime(availability.unavailableFromTime);
+  const availableMinutes = minutesFromTime(availability.availableFromTime);
+  if (unavailableMinutes === null || availableMinutes === null) return availability;
+
+  const now = new Date();
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+
+  const isUnavailableNow = unavailableMinutes < availableMinutes
+    ? nowMinutes >= unavailableMinutes && nowMinutes < availableMinutes
+    : nowMinutes >= unavailableMinutes || nowMinutes < availableMinutes;
+
+  const status = isUnavailableNow ? "unavailable" : "available";
+  const nextSwitchAt = buildDailySwitchDate(
+    isUnavailableNow ? availability.availableFromTime : availability.unavailableFromTime,
+    now
+  );
+
+  return {
+    ...availability,
+    status,
+    nextSwitchAt,
+    availableAt: isUnavailableNow ? nextSwitchAt : null,
+    reason: isUnavailableNow
+      ? "Daily schedule: worker is unavailable during this window."
+      : "Daily schedule: worker is available during this window."
+  };
+};
+
 export const listClientDirectory = asyncHandler(async (req, res) => {
   const { search = "", status = "" } = req.query;
 
@@ -64,7 +110,10 @@ export const listClientDirectory = asyncHandler(async (req, res) => {
   });
 
   let results = users.map((user) => {
-    const profile = profileMap.get(String(user._id)) || null;
+    const rawProfile = profileMap.get(String(user._id)) || null;
+    const profile = rawProfile
+      ? { ...rawProfile, availability: computeDirectoryAvailability(rawProfile.availability || {}) }
+      : null;
     const latestJob = latestJobMap.get(String(user._id)) || null;
     const profileLocation = profile?.defaultLocation || {};
     const latestJobLocation = latestJob?.location || {};
