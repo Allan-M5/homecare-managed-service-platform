@@ -132,7 +132,7 @@ function formatWorkerAvailabilityLine(dashboard) {
     if (status === "available") return availability.unavailableFromTime ? `Available now, unavailable daily from ${availability.unavailableFromTime}` : "Available now";
   }
 
-  const availableAt = availability?.availableAt || null;
+  const availableAt = availability?.nextSwitchAt || availability?.availableAt || null;
   const label = formatDateLabel(availableAt);
   if (!label) return "-";
   if (status === "available") return `Available from ${label}`;
@@ -1137,7 +1137,14 @@ mpesaNumber: String(profileForm.mpesaNumber || "").trim(),
       <div style={{ display: "grid", gap: "18px" }}>
         <div className="glass-card section-card" style={{ padding: "22px 22px 24px", minHeight: "250px" }}>
           <h3>Quick Availability</h3>
-          <div style={{ marginTop: "6px", marginBottom: "12px", color: "#bfdbfe", fontWeight: 700 }}>Next Availability: {formatWorkerAvailabilityLine(dashboard)}</div>
+          <div style={{ marginTop: "6px", marginBottom: "12px", color: "#bfdbfe", fontWeight: 700 }}>
+            Next Availability: {formatWorkerAvailabilityLine(dashboard)}
+          </div>
+          {dashboard?.profile?.availability?.reason ? (
+            <div style={{ marginBottom: "12px", color: "#dbe7f5", fontWeight: 600 }}>
+              {dashboard.profile.availability.reason}
+            </div>
+          ) : null}
           <p style={{ marginBottom: "18px", lineHeight: 1.8, color: "#dbe7f5" }}>
             Update your live readiness so admin can dispatch jobs correctly. When you are on a live assignment, the system keeps you engaged until release is fully cleared.
           </p>
