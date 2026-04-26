@@ -719,17 +719,27 @@ function formatAvailabilityWindow(profile = {}) {
     if (!value) return "";
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return "";
-    const datePart = date.toLocaleDateString("en-KE", {
-      weekday: "long",
-      day: "2-digit",
-      month: "long",
-      year: "numeric"
-    });
+    const now = new Date();
+    const tomorrow = new Date(now);
+    tomorrow.setDate(now.getDate() + 1);
+
+    const dayLabel = date.toDateString() === now.toDateString()
+      ? "today"
+      : date.toDateString() === tomorrow.toDateString()
+        ? "tomorrow"
+        : date.toLocaleDateString("en-KE", {
+            weekday: "long",
+            day: "2-digit",
+            month: "long",
+            year: "numeric"
+          });
+
     const timePart = date.toLocaleTimeString("en-KE", {
       hour: "2-digit",
       minute: "2-digit"
     });
-    return `${datePart} at ${timePart}`;
+
+    return `${dayLabel} at ${timePart}`;
   };
 
   const formatClockLabel = (value) => {
@@ -815,6 +825,26 @@ function isWorkerOnlineNow(worker = {}) {
 function getWorkerAvailabilityState(worker = {}) {
   const status = String(worker?.profile?.availability?.status || "").toLowerCase();
   return ["available", "on", "online", "ready"].includes(status);
+}
+
+function formatTimingDelta(value) {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMinutes = Math.floor(diffMs / 60000);
+
+  if (diffMinutes < 1) return "just now";
+  if (diffMinutes < 60) return `${diffMinutes} min ago`;
+
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) return `${diffHours} hr ago`;
+
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays === 1) return "yesterday";
+  return `${diffDays} days ago`;
 }
 
 function getTimingIntelligence(job = {}) {
