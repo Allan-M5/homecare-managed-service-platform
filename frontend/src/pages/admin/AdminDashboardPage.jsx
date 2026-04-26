@@ -736,8 +736,10 @@ function formatAvailabilityWindow(profile = {}) {
     return date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
   };
 
-  const nextSwitchAt = availability?.nextSwitchAt || availability?.availableAt || "";
+  const nextSwitchAt = availability?.nextSwitchAt || availability?.availableAt || availability?.unavailableAt || "";
   const nextSwitchLabel = formatDateLabel(nextSwitchAt);
+  const availableAtLabel = formatDateLabel(availability?.availableAt || "");
+  const unavailableAtLabel = formatDateLabel(availability?.unavailableAt || "");
 
   if (availability?.repeatDaily) {
     const unavailableTime = formatClockLabel(availability?.unavailableFromTime) || availability?.unavailableFromTime || "-";
@@ -759,11 +761,13 @@ function formatAvailabilityWindow(profile = {}) {
   }
 
   if (status === "unavailable") {
-    return nextSwitchLabel ? `Unavailable until ${nextSwitchLabel}` : "Unavailable now";
+    return availableAtLabel || nextSwitchLabel ? `Unavailable until ${availableAtLabel || nextSwitchLabel}` : "Unavailable now";
   }
 
   if (status === "available") {
-    return nextSwitchLabel ? `Available from ${nextSwitchLabel}` : "Available now";
+    return unavailableAtLabel || availability?.unavailableAt
+      ? `Available until ${unavailableAtLabel || nextSwitchLabel}`
+      : "Available now";
   }
 
   return "Availability not set";
@@ -3812,12 +3816,42 @@ Please check your dashboard for the latest instructions.`
         {visibleWorkerDirectory.map((worker) => {
           const workerStatus = String(worker.currentAccountState || worker.accountStatus || "-").toLowerCase();
           const statusTone = workerStatus === "suspended" ? "#fca5a5" : workerStatus === "deleted" ? "#fda4af" : "#86efac";
+          const workerAvailabilityStatus = String(worker?.profile?.availability?.status || "").toLowerCase();
+          const isWorkerCurrentlyAvailable = ["available", "on", "online", "ready"].includes(workerAvailabilityStatus);
+          const workerAvailabilityLine = formatAvailabilityWindow(worker.profile);
           const workerSections = [
             ["Services Offered", Array.isArray(worker.profile?.serviceCategories) ? worker.profile.serviceCategories.map(formatServiceLabel).join(", ") : cleanText(worker.profile?.serviceCategories || "-"), "#93c5fd"],
             ["Home Location", `${cleanText(worker.profile?.homeLocation?.county || "-")} / ${cleanText(worker.profile?.homeLocation?.town || "-")} / ${cleanText(worker.profile?.homeLocation?.estate || "-")}`, "#fdba74", false],
             ["Address", cleanText(worker.profile?.homeLocation?.addressLine || "-"), "#c4b5fd", false],
             ["Personal Details", `Phone: ${cleanText(worker.phone || "-")} | Email: ${cleanText(worker.email || "-")} | Last Login: ${formatDateTime(worker.lastLoginAt)}`, "#60a5fa", false],
-            ["Availability & Work Preferences", `Availability: ${formatAvailabilityWindow(worker.profile)} | Work Radius: ${cleanText(worker.profile?.preferredWorkRadiusKm || "-")} KM | Can Bring Supplies: ${String(worker.profile?.canBringOwnSupplies) === "true" || worker.profile?.canBringOwnSupplies === true ? "Yes" : "No / Depends"}`, "#86efac", false],
+            ["Availability & Work Preferences", (
+              <div style={{ display: "grid", gap: "8px" }}>
+                <div
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    width: "fit-content",
+                    padding: "8px 12px",
+                    borderRadius: "999px",
+                    fontWeight: 950,
+                    color: isWorkerCurrentlyAvailable ? "#86efac" : "#fca5a5",
+                    background: isWorkerCurrentlyAvailable ? "rgba(34,197,94,0.16)" : "rgba(239,68,68,0.16)",
+                    border: isWorkerCurrentlyAvailable ? "1px solid rgba(34,197,94,0.35)" : "1px solid rgba(239,68,68,0.35)"
+                  }}
+                >
+                  <span
+                    className="live-status-dot"
+                    style={{
+                      color: isWorkerCurrentlyAvailable ? "#22c55e" : "#ef4444",
+                      background: isWorkerCurrentlyAvailable ? "#22c55e" : "#ef4444"
+                    }}
+                  />
+                  {workerAvailabilityLine}
+                </div>
+                <div>{`Work Radius: ${cleanText(worker.profile?.preferredWorkRadiusKm || "-")} KM | Can Bring Supplies: ${String(worker.profile?.canBringOwnSupplies) === "true" || worker.profile?.canBringOwnSupplies === true ? "Yes" : "No / Depends"}`}</div>
+              </div>
+            ), "#86efac", false],
             ["Submitted Uploads", renderWorkerUploads(worker), "#f9a8d4"],
             ["Audit Trail", `Suspended At: ${formatDateTime(worker.suspendedAt)} | Suspend Reason: ${cleanText(worker.suspendedReason || worker.profile?.suspensionReason || "-")} | Reactivated At: ${formatDateTime(worker.reactivatedAt)} | Reactivation Note: ${cleanText(worker.reactivationNote || "-")} | Deactivated At: ${formatDateTime(worker.deletedAt)} | Deactivation Reason: ${cleanText(worker.deletionReason || "-")}`, "#22d3ee", false],
             ["Admin Activity", `Last Updated: ${formatDateTime(worker.updatedAt || worker.profile?.updatedAt)} | Notes: ${cleanText(worker.profile?.adminNotes || worker.profile?.notesForAdmin || "-")}`, "#facc15", false],
@@ -3848,9 +3882,9 @@ Please check your dashboard for the latest instructions.`
                         borderRadius: "999px",
                         fontSize: "11px",
                         fontWeight: 900,
-                        color: ["available", "on", "online", "ready"].includes(String(worker?.profile?.availability?.status || "").toLowerCase()) ? "#86efac" : "#fca5a5",
-                        background: ["available", "on", "online", "ready"].includes(String(worker?.profile?.availability?.status || "").toLowerCase()) ? "rgba(34,197,94,0.12)" : "rgba(239,68,68,0.12)",
-                        border: ["available", "on", "online", "ready"].includes(String(worker?.profile?.availability?.status || "").toLowerCase()) ? "1px solid rgba(34,197,94,0.28)" : "1px solid rgba(239,68,68,0.28)"
+                        color: isWorkerCurrentlyAvailable ? "#86efac" : "#fca5a5",
+                        background: isWorkerCurrentlyAvailable ? "rgba(34,197,94,0.12)" : "rgba(239,68,68,0.12)",
+                        border: isWorkerCurrentlyAvailable ? "1px solid rgba(34,197,94,0.28)" : "1px solid rgba(239,68,68,0.28)"
                       }}
                     >
                       <span
@@ -3858,10 +3892,10 @@ Please check your dashboard for the latest instructions.`
                           width: "8px",
                           height: "8px",
                           borderRadius: "999px",
-                          background: ["available", "on", "online", "ready"].includes(String(worker?.profile?.availability?.status || "").toLowerCase()) ? "#22c55e" : "#ef4444"
+                          background: isWorkerCurrentlyAvailable ? "#22c55e" : "#ef4444"
                         }}
                       />
-                      {["available", "on", "online", "ready"].includes(String(worker?.profile?.availability?.status || "").toLowerCase()) ? "Online" : "Offline"}
+                      {isWorkerCurrentlyAvailable ? "Online" : "Offline"}
                     </div>
                   </div><div style={{ color: "#cbd5e1", marginTop: "6px" }}>Registered: {formatDateTime(worker.createdAt)}</div><div style={{ color: "#cbd5e1", marginTop: "6px" }}>Approved: {formatDateTime(worker.applicationSummary?.approvedAt)}</div><div style={{ color: "#cbd5e1", marginTop: "6px" }}>Last Login: {formatDateTime(worker.lastLoginAt)}</div></div></div><div
                 style={{
