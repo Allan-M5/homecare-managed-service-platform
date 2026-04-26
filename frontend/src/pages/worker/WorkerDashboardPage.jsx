@@ -8,7 +8,7 @@ import Loader from "../../components/common/Loader";
 import { http } from "../../api/http";
 import { changePasswordRequest } from "../../api/authApi";
 import {
-  getWorkerDashboardRequest,
+  getWorkerDashboardRequest, workerHeartbeatRequest,
   updateWorkerAvailabilityRequest
 } from "../../api/workerApi";
 import {
@@ -388,7 +388,16 @@ function getWorkerTimeline(job) {
 }
 
 export default function WorkerDashboardPage() {
+  
+  // HEARTBEAT_ACTIVE
   useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      workerHeartbeatRequest().catch(() => {});
+    }, 5000);
+
+    return () => window.clearInterval(intervalId);
+  }, []);
+useEffect(() => {
     if (typeof document === "undefined") return;
     if (document.getElementById("worker-profile-mobile-fix")) return;
 
@@ -541,7 +550,7 @@ export default function WorkerDashboardPage() {
 
   const loadDashboard = async () => {
     const [dashboardResponse, jobsResponse] = await Promise.all([
-      getWorkerDashboardRequest(),
+      getWorkerDashboardRequest, workerHeartbeatRequest(),
       getAssignedWorkerJobsRequest()
     ]);
 

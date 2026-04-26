@@ -460,3 +460,18 @@ export const getAvailableWorkers = asyncHandler(async (req, res) => {
     data: rankedWorkers
   });
 });
+
+export const workerHeartbeat = asyncHandler(async (req, res) => {
+  await WorkerProfile.updateOne(
+    { userId: req.user._id },
+    {
+      $set: {
+        lastSeenAt: new Date()
+      }
+    }
+  );
+
+  return sendSuccess(res, {
+    message: "Heartbeat recorded."
+  });
+});

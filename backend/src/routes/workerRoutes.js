@@ -10,9 +10,13 @@ import {
 
 const router = Router();
 
+router.post("/heartbeat", protect, workerHeartbeat);
+
 router.get("/available", protect, authorize(USER_ROLES.ADMIN), getAvailableWorkers);
 
 router.use(protect, authorize(USER_ROLES.WORKER));
+
+router.post("/heartbeat", protect, workerHeartbeat);
 
 router.get("/dashboard", getWorkerDashboard);
 router.patch("/availability", updateWorkerAvailability);
