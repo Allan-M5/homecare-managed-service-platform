@@ -550,7 +550,7 @@ useEffect(() => {
 
   const loadDashboard = async () => {
     const [dashboardResponse, jobsResponse] = await Promise.all([
-      getWorkerDashboardRequest, workerHeartbeatRequest(),
+      getWorkerDashboardRequest(),
       getAssignedWorkerJobsRequest()
     ]);
 

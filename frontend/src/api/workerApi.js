@@ -23,5 +23,5 @@ export const getAvailableWorkersRequest = async (jobId) => {
 };
 
 export const workerHeartbeatRequest = async () => {
-  return http.post("/worker/heartbeat");
+  return http.post("/api/worker/heartbeat");
 };
