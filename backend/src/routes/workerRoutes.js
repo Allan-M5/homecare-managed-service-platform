@@ -5,7 +5,7 @@ import {
   getWorkerDashboard,
   updateWorkerAvailability,
   updateWorkerCurrentLocation,
-  getAvailableWorkers
+  workerHeartbeat
 } from "../controllers/workerController.js";
 
 const router = Router();
