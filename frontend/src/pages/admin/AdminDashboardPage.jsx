@@ -719,13 +719,17 @@ function formatAvailabilityWindow(profile = {}) {
     if (!value) return "";
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return "";
-    const now = new Date();
-    const tomorrow = new Date(now);
-    tomorrow.setDate(now.getDate() + 1);
-    const dayLabel = date.toDateString() === now.toDateString()
-      ? "today"
-      : (date.toDateString() === tomorrow.toDateString() ? "tomorrow" : date.toLocaleDateString());
-    return `${dayLabel} at ${date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`;
+    const datePart = date.toLocaleDateString("en-KE", {
+      weekday: "long",
+      day: "2-digit",
+      month: "long",
+      year: "numeric"
+    });
+    const timePart = date.toLocaleTimeString("en-KE", {
+      hour: "2-digit",
+      minute: "2-digit"
+    });
+    return `${datePart} at ${timePart}`;
   };
 
   const formatClockLabel = (value) => {
@@ -1554,6 +1558,23 @@ const resetModal = () => {
 
   useEffect(() => {
     load();
+  }, []);
+
+  useEffect(() => {
+    const refreshWorkerDirectory = async () => {
+      try {
+        const workersRes = await getWorkerDirectoryRequest();
+        setWorkerDirectory(Array.isArray(workersRes.data) ? workersRes.data : []);
+      } catch (_err) {
+        // Keep existing admin screen stable during silent polling failures.
+      }
+    };
+
+    const intervalId = window.setInterval(refreshWorkerDirectory, 10000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
   }, []);
 
   const refreshCurrentView = async () => {
