@@ -714,47 +714,61 @@ function getMissingApplicationDetails(application = {}) {
 function formatAvailabilityWindow(profile = {}) {
   const availability = profile?.availability || {};
   const status = String(availability?.status || "").toLowerCase();
-  const availableAt =
-    availability?.availableAt ||
-    availability?.scheduledFor ||
-    availability?.availableFrom ||
-    availability?.unavailableUntil ||
-    "";
 
-  if (!availableAt) {
-    return status ? cleanText(status) : "-";
+  const formatDateLabel = (value) => {
+    if (!value) return "";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+    const now = new Date();
+    const tomorrow = new Date(now);
+    tomorrow.setDate(now.getDate() + 1);
+    const dayLabel = date.toDateString() === now.toDateString()
+      ? "today"
+      : (date.toDateString() === tomorrow.toDateString() ? "tomorrow" : date.toLocaleDateString());
+    return `${dayLabel} at ${date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`;
+  };
+
+  const formatClockLabel = (value) => {
+    const match = String(value || "").match(/^(\d{2}):(\d{2})$/);
+    if (!match) return "";
+    const date = new Date();
+    date.setHours(Number(match[1]), Number(match[2]), 0, 0);
+    return date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  };
+
+  const nextSwitchAt = availability?.nextSwitchAt || availability?.availableAt || "";
+  const nextSwitchLabel = formatDateLabel(nextSwitchAt);
+
+  if (availability?.repeatDaily) {
+    const unavailableTime = formatClockLabel(availability?.unavailableFromTime) || availability?.unavailableFromTime || "-";
+    const availableTime = formatClockLabel(availability?.availableFromTime) || availability?.availableFromTime || "-";
+
+    if (status === "unavailable") {
+      return nextSwitchLabel
+        ? `Daily schedule: Unavailable now, available ${nextSwitchLabel}`
+        : `Daily schedule: Unavailable now, available from ${availableTime}`;
+    }
+
+    if (status === "available") {
+      return nextSwitchLabel
+        ? `Daily schedule: Available now, unavailable ${nextSwitchLabel}`
+        : `Daily schedule: Available now, unavailable from ${unavailableTime}`;
+    }
+
+    return `Daily schedule: available from ${availableTime}, unavailable from ${unavailableTime}`;
   }
 
-  const date = new Date(availableAt);
-  if (Number.isNaN(date.getTime())) {
-    return cleanText(status || "-");
+  if (status === "unavailable") {
+    return nextSwitchLabel ? `Unavailable until ${nextSwitchLabel}` : "Unavailable now";
   }
 
-  const now = new Date();
-  const tomorrow = new Date(now);
-  tomorrow.setDate(now.getDate() + 1);
+  if (status === "available") {
+    return nextSwitchLabel ? `Available from ${nextSwitchLabel}` : "Available now";
+  }
 
-  const sameDay = date.toDateString() === now.toDateString();
-  const isTomorrow = date.toDateString() === tomorrow.toDateString();
-  const dayLabel = sameDay ? "today" : (isTomorrow ? "tomorrow" : date.toLocaleDateString());
-  const timeLabel = date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-
-  if (status === "available") return `Available from ${dayLabel} at ${timeLabel}`;
-  if (status === "unavailable") return `Unavailable until ${dayLabel} at ${timeLabel}`;
-  return `${cleanText(status || "Scheduled")} - ${dayLabel} at ${timeLabel}`;
+  return "Availability not set";
 }
 
-
-function formatTimingDelta(ms) {
-  if (ms == null || Number.isNaN(ms)) return "-";
-  const abs = Math.abs(ms);
-  const totalMinutes = Math.floor(abs / 60000);
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-
-  if (hours <= 0) return `${minutes} min`;
-  return `${hours}h ${String(minutes).padStart(2, "0")}m`;
-}
 
 function getExpectedCompletionAt(job = {}) {
   if (job?.mustBeCompletedBy) {

@@ -90,6 +90,7 @@ const refreshScheduledAvailabilityIfDue = async (userId) => {
     profile.availability.reason = "Auto-restored to available at scheduled time.";
     profile.availability.updatedAt = new Date();
     profile.availability.availableAt = null;
+    profile.availability.nextSwitchAt = null;
     profile.availability.autoSwitch = false;
     profile.lastSeenAt = new Date();
     await profile.save({ validateModifiedOnly: true });
@@ -109,6 +110,7 @@ const refreshAllDueWorkerAvailability = async () => {
     worker.availability.reason = "Auto-restored to available at scheduled time.";
     worker.availability.updatedAt = new Date();
     worker.availability.availableAt = null;
+    worker.availability.nextSwitchAt = null;
     worker.availability.autoSwitch = false;
     worker.lastSeenAt = new Date();
     await worker.save({ validateModifiedOnly: true });
@@ -192,47 +194,96 @@ export const updateWorkerAvailability = asyncHandler(async (req, res) => {
     throw new AppError("Only workers can update availability.", 403);
   }
 
-  const { status, reason = "", availableAt = null, repeatDaily = false, unavailableFromTime = "", availableFromTime = "" } = req.body;
+  const {
+    status,
+    reason = "",
+    availableAt = null,
+    repeatDaily = false,
+    unavailableFromTime = "",
+    availableFromTime = ""
+  } = req.body;
 
   if (!status || !WORKER_AVAILABILITY_STATUS_VALUES.includes(status)) {
     throw new AppError("Invalid worker availability status.", 400);
   }
 
   const futureTime = availableAt ? new Date(availableAt) : null;
-  const hasFutureTime = futureTime && !Number.isNaN(futureTime.getTime()) && futureTime.getTime() > Date.now();
+  const hasFutureTime =
+    futureTime &&
+    !Number.isNaN(futureTime.getTime()) &&
+    futureTime.getTime() > Date.now();
+
+  if (availableAt && !hasFutureTime) {
+    throw new AppError("Selected availability time must be in the future.", 400);
+  }
 
   let effectiveStatus = status;
-  let effectiveReason = reason || "";
+  let effectiveReason = String(reason || "").trim();
 
-  if (status === "available" && hasFutureTime) {
+  if (hasFutureTime) {
     effectiveStatus = "unavailable";
-    effectiveReason = reason || "Worker scheduled future availability.";
+    effectiveReason =
+      effectiveReason ||
+      "Worker is unavailable now and will become available at the selected time.";
   }
 
-  if (status === "unavailable" && hasFutureTime) {
-    effectiveReason = reason || "Worker temporarily unavailable until scheduled return time.";
+  if (repeatDaily) {
+    effectiveStatus = computeDailyAvailability({
+      status: "available",
+      repeatDaily: true,
+      unavailableFromTime: String(unavailableFromTime || "").trim(),
+      availableFromTime: String(availableFromTime || "").trim()
+    }).status;
+
+    effectiveReason = "Daily availability schedule saved.";
   }
+
+  const computedDailyAvailability = repeatDaily
+    ? computeDailyAvailability({
+        status: effectiveStatus,
+        reason: effectiveReason,
+        repeatDaily: true,
+        unavailableFromTime: String(unavailableFromTime || "").trim(),
+        availableFromTime: String(availableFromTime || "").trim()
+      })
+    : null;
+
+  const availabilityPayload = {
+    status: repeatDaily ? computedDailyAvailability.status : effectiveStatus,
+    reason: repeatDaily ? computedDailyAvailability.reason || effectiveReason : effectiveReason,
+    updatedAt: new Date(),
+    availableAt: repeatDaily
+      ? computedDailyAvailability.availableAt || null
+      : hasFutureTime ? futureTime : null,
+    nextSwitchAt: repeatDaily
+      ? computedDailyAvailability.nextSwitchAt || null
+      : hasFutureTime ? futureTime : null,
+    autoSwitch: repeatDaily ? false : Boolean(hasFutureTime),
+    repeatDaily: Boolean(repeatDaily),
+    unavailableFromTime: repeatDaily ? String(unavailableFromTime || "").trim() : "",
+    availableFromTime: repeatDaily ? String(availableFromTime || "").trim() : "",
+    statusLabel: repeatDaily
+      ? computedDailyAvailability.status === "unavailable"
+        ? "Daily schedule: unavailable now"
+        : "Daily schedule: available now"
+      : effectiveStatus === "unavailable" && hasFutureTime
+        ? "Unavailable until scheduled time"
+        : effectiveStatus === "unavailable"
+          ? "Unavailable now"
+          : "Available now"
+  };
 
   const updatedProfile = await WorkerProfile.findOneAndUpdate(
     { userId: req.user._id },
     {
       $set: {
-        availability: {
-          status: effectiveStatus,
-          reason: effectiveReason,
-          updatedAt: new Date(),
-          availableAt: hasFutureTime ? futureTime : null,
-          autoSwitch: !!hasFutureTime,
-          repeatDaily: Boolean(repeatDaily),
-          unavailableFromTime: repeatDaily ? String(unavailableFromTime || "").trim() : "",
-          availableFromTime: repeatDaily ? String(availableFromTime || "").trim() : "",
-          nextSwitchAt: null
-        },
+        availability: availabilityPayload,
         lastSeenAt: new Date()
       }
     },
     {
-      new: true
+      new: true,
+      runValidators: true
     }
   ).lean();
 

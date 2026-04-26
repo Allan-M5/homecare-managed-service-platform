@@ -126,18 +126,45 @@ function formatWorkerAvailabilityLine(dashboard) {
     return `${dayLabel} at ${date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`;
   };
 
+  const formatClockLabel = (value) => {
+    const match = String(value || "").match(/^(\d{2}):(\d{2})$/);
+    if (!match) return "";
+    const date = new Date();
+    date.setHours(Number(match[1]), Number(match[2]), 0, 0);
+    return date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  };
+
+  const nextSwitchAt = availability?.nextSwitchAt || availability?.availableAt || "";
+  const nextSwitchLabel = formatDateLabel(nextSwitchAt);
+
   if (availability?.repeatDaily) {
-    const nextSwitch = formatDateLabel(availability?.nextSwitchAt || availability?.availableAt);
-    if (status === "unavailable") return nextSwitch ? `Unavailable now, available ${nextSwitch}` : `Unavailable now. Daily return: ${availability.availableFromTime || "-"}`;
-    if (status === "available") return availability.unavailableFromTime ? `Available now, unavailable daily from ${availability.unavailableFromTime}` : "Available now";
+    const unavailableTime = formatClockLabel(availability?.unavailableFromTime) || availability?.unavailableFromTime || "-";
+    const availableTime = formatClockLabel(availability?.availableFromTime) || availability?.availableFromTime || "-";
+
+    if (status === "unavailable") {
+      return nextSwitchLabel
+        ? `Daily schedule: Unavailable now, available ${nextSwitchLabel}`
+        : `Daily schedule: Unavailable now, available from ${availableTime}`;
+    }
+
+    if (status === "available") {
+      return nextSwitchLabel
+        ? `Daily schedule: Available now, unavailable ${nextSwitchLabel}`
+        : `Daily schedule: Available now, unavailable from ${unavailableTime}`;
+    }
+
+    return `Daily schedule: available from ${availableTime}, unavailable from ${unavailableTime}`;
   }
 
-  const availableAt = availability?.nextSwitchAt || availability?.availableAt || null;
-  const label = formatDateLabel(availableAt);
-  if (!label) return "-";
-  if (status === "available") return `Available from ${label}`;
-  if (status === "unavailable") return `Unavailable until ${label}`;
-  return label;
+  if (status === "unavailable") {
+    return nextSwitchLabel ? `Unavailable until ${nextSwitchLabel}` : "Unavailable now";
+  }
+
+  if (status === "available") {
+    return nextSwitchLabel ? `Available from ${nextSwitchLabel}` : "Available now";
+  }
+
+  return "Availability not set";
 }
 
 function resolveWorkerStage(job) {
@@ -418,6 +445,39 @@ export default function WorkerDashboardPage() {
     document.head.appendChild(style);
   }, []);
 
+  useEffect(() => {
+    const availability = dashboard?.profile?.availability || {};
+    const switchAt = availability?.nextSwitchAt || availability?.availableAt || "";
+
+    if (!switchAt) return undefined;
+
+    const switchTime = new Date(switchAt).getTime();
+    if (Number.isNaN(switchTime)) return undefined;
+
+    const refreshIfDue = () => {
+      const latestAvailability = dashboard?.profile?.availability || {};
+      const latestSwitchAt = latestAvailability?.nextSwitchAt || latestAvailability?.availableAt || "";
+      const latestSwitchTime = new Date(latestSwitchAt).getTime();
+
+      if (!Number.isNaN(latestSwitchTime) && latestSwitchTime <= Date.now()) {
+        console.info("Worker dashboard scheduled auto-switch refresh active");
+        loadDashboard();
+      }
+    };
+
+    const timeoutId = window.setTimeout(refreshIfDue, Math.max(1000, switchTime - Date.now() + 1500));
+    const intervalId = window.setInterval(refreshIfDue, 10000);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+      window.clearInterval(intervalId);
+    };
+  }, [
+    dashboard?.profile?.availability?.nextSwitchAt,
+    dashboard?.profile?.availability?.availableAt
+  ]);
+
+
   const { handleAccountDeletion, logout, user, refreshCurrentUser } = useAuth();
 
   const navigate = useNavigate();
@@ -634,19 +694,10 @@ export default function WorkerDashboardPage() {
         ? "Unavailable"
         : "Available";
 
-  const availabilityConfig = dashboard?.profile?.availability || {};
-  const scheduledAvailabilityAt =
-    availabilityConfig?.scheduledFor ||
-    availabilityConfig?.availableFrom ||
-    availabilityConfig?.unavailableUntil ||
-    availabilityConfig?.effectiveAt ||
-    "";
-
-  const scheduledAvailabilityLabel = hasLiveJob
+  const availabilityStatusLine = formatWorkerAvailabilityLine(dashboard);
+  const scheduledAvailabilityLabel = hasLiveJob || availabilityStatusLine === "Availability not set"
     ? ""
-    : scheduledAvailabilityAt
-      ? `${liveAvailabilityValue === "Available" ? "Available from" : "Unavailable until"} ${formatDateTime(scheduledAvailabilityAt)}`
-      : "";
+    : availabilityStatusLine;
 
 
   const availabilityToneStyles = useMemo(() => {
@@ -763,13 +814,11 @@ export default function WorkerDashboardPage() {
       setShowAvailabilityModal(false);
       setAvailabilityDateTime("");
       setAvailabilityMode("immediate");
-      setSuccessMessage(
-        updatedAvailability.status === "unavailable" && updatedAvailability.availableAt
-          ? `Unavailable until ${formatDateTime(updatedAvailability.availableAt)}. Admin will see your scheduled return time.`
-          : updatedAvailability.status === "available"
-            ? "You are now marked as available for dispatch."
-            : "Availability updated successfully."
-      );
+      const finalAvailabilityLine = formatWorkerAvailabilityLine({
+        profile: { availability: updatedAvailability },
+        summary: { availabilityStatus: updatedAvailability.status || payload.status }
+      });
+      setSuccessMessage(`${finalAvailabilityLine}. Admin and client matching screens will use this schedule status.`);
     } catch (err) {
       setError(err?.response?.data?.message || "Could not update availability.");
     } finally {
@@ -1138,7 +1187,7 @@ mpesaNumber: String(profileForm.mpesaNumber || "").trim(),
         <div className="glass-card section-card" style={{ padding: "22px 22px 24px", minHeight: "250px" }}>
           <h3>Quick Availability</h3>
           <div style={{ marginTop: "6px", marginBottom: "12px", color: "#bfdbfe", fontWeight: 700 }}>
-            Next Availability: {formatWorkerAvailabilityLine(dashboard)}
+            Next Availability: {availabilityStatusLine}
           </div>
           {dashboard?.profile?.availability?.reason ? (
             <div style={{ marginBottom: "12px", color: "#dbe7f5", fontWeight: 600 }}>
