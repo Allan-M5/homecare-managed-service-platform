@@ -159,7 +159,13 @@ export const getWorkerDashboard = asyncHandler(async (req, res) => {
     throw new AppError("Only workers can access this dashboard.", 403);
   }
 
-  const profile = await refreshScheduledAvailabilityIfDue(req.user._id);
+  const profileDoc = await WorkerProfile.findOne({ userId: req.user._id });
+  if (!profileDoc) {
+    throw new AppError("Worker profile not found.", 404);
+  }
+
+  const refreshedProfile = await refreshScheduledAvailabilityIfDue(req.user._id);
+  const profile = applyComputedAvailabilityToProfileObject(profileDoc.toObject());
   const applicationRecord = profile?.applicationId
     ? await WorkerApplication.findById(profile.applicationId).lean()
     : null;
