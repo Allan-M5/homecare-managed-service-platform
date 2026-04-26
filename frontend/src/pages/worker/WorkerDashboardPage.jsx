@@ -559,17 +559,37 @@ export default function WorkerDashboardPage() {
   };
 
   useEffect(() => {
-    const load = async () => {
+    let mounted = true;
+    let polling = false;
+
+    const load = async (silent = false) => {
+      if (polling) return;
+      polling = true;
+
       try {
         await loadDashboard();
       } catch (err) {
-        setError(err?.response?.data?.message || "Failed to load dashboard.");
+        if (!silent && mounted) {
+          setError(err?.response?.data?.message || "Failed to load dashboard.");
+        }
       } finally {
-        setIsLoading(false);
+        polling = false;
+        if (mounted) {
+          setIsLoading(false);
+        }
       }
     };
 
-    load();
+    load(false);
+
+    const intervalId = window.setInterval(() => {
+      load(true);
+    }, 10000);
+
+    return () => {
+      mounted = false;
+      window.clearInterval(intervalId);
+    };
   }, []);
 
   useEffect(() => {
