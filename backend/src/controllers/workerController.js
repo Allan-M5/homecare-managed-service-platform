@@ -79,17 +79,37 @@ const refreshScheduledAvailabilityIfDue = async (userId) => {
     throw new AppError("Worker profile not found.", 404);
   }
 
-  const dueAt = profile.availability?.availableAt ? new Date(profile.availability.availableAt).getTime() : null;
-  const shouldAutoSwitch =
-    profile.availability?.autoSwitch &&
-    dueAt &&
-    dueAt <= Date.now();
+  const availableDueAt = profile.availability?.availableAt ? new Date(profile.availability.availableAt).getTime() : null;
+  const unavailableDueAt = profile.availability?.unavailableAt ? new Date(profile.availability.unavailableAt).getTime() : null;
 
-  if (shouldAutoSwitch) {
+  const shouldSwitchAvailable =
+    profile.availability?.autoSwitch &&
+    availableDueAt &&
+    availableDueAt <= Date.now();
+
+  const shouldSwitchUnavailable =
+    profile.availability?.autoSwitch &&
+    unavailableDueAt &&
+    unavailableDueAt <= Date.now();
+
+  if (shouldSwitchAvailable) {
     profile.availability.status = "available";
     profile.availability.reason = "Auto-restored to available at scheduled time.";
     profile.availability.updatedAt = new Date();
     profile.availability.availableAt = null;
+    profile.availability.unavailableAt = null;
+    profile.availability.nextSwitchAt = null;
+    profile.availability.autoSwitch = false;
+    profile.lastSeenAt = new Date();
+    await profile.save({ validateModifiedOnly: true });
+  }
+
+  if (shouldSwitchUnavailable) {
+    profile.availability.status = "unavailable";
+    profile.availability.reason = "Auto-switched to unavailable at scheduled time.";
+    profile.availability.updatedAt = new Date();
+    profile.availability.availableAt = null;
+    profile.availability.unavailableAt = null;
     profile.availability.nextSwitchAt = null;
     profile.availability.autoSwitch = false;
     profile.lastSeenAt = new Date();
@@ -100,16 +120,32 @@ const refreshScheduledAvailabilityIfDue = async (userId) => {
 };
 
 const refreshAllDueWorkerAvailability = async () => {
+  const now = new Date();
   const dueWorkers = await WorkerProfile.find({
     "availability.autoSwitch": true,
-    "availability.availableAt": { $lte: new Date() }
+    $or: [
+      { "availability.availableAt": { $lte: now } },
+      { "availability.unavailableAt": { $lte: now } }
+    ]
   });
 
   for (const worker of dueWorkers) {
-    worker.availability.status = "available";
-    worker.availability.reason = "Auto-restored to available at scheduled time.";
+    const availableDueAt = worker.availability?.availableAt ? new Date(worker.availability.availableAt).getTime() : null;
+    const unavailableDueAt = worker.availability?.unavailableAt ? new Date(worker.availability.unavailableAt).getTime() : null;
+
+    if (availableDueAt && availableDueAt <= Date.now()) {
+      worker.availability.status = "available";
+      worker.availability.reason = "Auto-restored to available at scheduled time.";
+    }
+
+    if (unavailableDueAt && unavailableDueAt <= Date.now()) {
+      worker.availability.status = "unavailable";
+      worker.availability.reason = "Auto-switched to unavailable at scheduled time.";
+    }
+
     worker.availability.updatedAt = new Date();
     worker.availability.availableAt = null;
+    worker.availability.unavailableAt = null;
     worker.availability.nextSwitchAt = null;
     worker.availability.autoSwitch = false;
     worker.lastSeenAt = new Date();
@@ -204,6 +240,7 @@ export const updateWorkerAvailability = asyncHandler(async (req, res) => {
     status,
     reason = "",
     availableAt = null,
+    unavailableAt = null,
     repeatDaily = false,
     unavailableFromTime = "",
     availableFromTime = ""
@@ -213,24 +250,46 @@ export const updateWorkerAvailability = asyncHandler(async (req, res) => {
     throw new AppError("Invalid worker availability status.", 400);
   }
 
-  const futureTime = availableAt ? new Date(availableAt) : null;
-  const hasFutureTime =
-    futureTime &&
-    !Number.isNaN(futureTime.getTime()) &&
-    futureTime.getTime() > Date.now();
+  const availableFutureTime = availableAt ? new Date(availableAt) : null;
+  const unavailableFutureTime = unavailableAt ? new Date(unavailableAt) : null;
 
-  if (availableAt && !hasFutureTime) {
+  const hasAvailableFutureTime =
+    availableFutureTime &&
+    !Number.isNaN(availableFutureTime.getTime()) &&
+    availableFutureTime.getTime() > Date.now();
+
+  const hasUnavailableFutureTime =
+    unavailableFutureTime &&
+    !Number.isNaN(unavailableFutureTime.getTime()) &&
+    unavailableFutureTime.getTime() > Date.now();
+
+  if (availableAt && !hasAvailableFutureTime) {
     throw new AppError("Selected availability time must be in the future.", 400);
+  }
+
+  if (unavailableAt && !hasUnavailableFutureTime) {
+    throw new AppError("Selected unavailability time must be in the future.", 400);
+  }
+
+  if (hasAvailableFutureTime && hasUnavailableFutureTime) {
+    throw new AppError("Choose either scheduled availability or scheduled unavailability, not both.", 400);
   }
 
   let effectiveStatus = status;
   let effectiveReason = String(reason || "").trim();
 
-  if (hasFutureTime) {
+  if (hasAvailableFutureTime) {
     effectiveStatus = "unavailable";
     effectiveReason =
       effectiveReason ||
       "Worker is unavailable now and will become available at the selected time.";
+  }
+
+  if (hasUnavailableFutureTime) {
+    effectiveStatus = "available";
+    effectiveReason =
+      effectiveReason ||
+      "Worker is available now and will become unavailable at the selected time.";
   }
 
   if (repeatDaily) {
@@ -260,11 +319,14 @@ export const updateWorkerAvailability = asyncHandler(async (req, res) => {
     updatedAt: new Date(),
     availableAt: repeatDaily
       ? computedDailyAvailability.availableAt || null
-      : hasFutureTime ? futureTime : null,
+      : hasAvailableFutureTime ? availableFutureTime : null,
+    unavailableAt: repeatDaily
+      ? null
+      : hasUnavailableFutureTime ? unavailableFutureTime : null,
     nextSwitchAt: repeatDaily
       ? computedDailyAvailability.nextSwitchAt || null
-      : hasFutureTime ? futureTime : null,
-    autoSwitch: repeatDaily ? false : Boolean(hasFutureTime),
+      : hasAvailableFutureTime ? availableFutureTime : hasUnavailableFutureTime ? unavailableFutureTime : null,
+    autoSwitch: repeatDaily ? false : Boolean(hasAvailableFutureTime || hasUnavailableFutureTime),
     repeatDaily: Boolean(repeatDaily),
     unavailableFromTime: repeatDaily ? String(unavailableFromTime || "").trim() : "",
     availableFromTime: repeatDaily ? String(availableFromTime || "").trim() : "",
@@ -272,11 +334,13 @@ export const updateWorkerAvailability = asyncHandler(async (req, res) => {
       ? computedDailyAvailability.status === "unavailable"
         ? "Daily schedule: unavailable now"
         : "Daily schedule: available now"
-      : effectiveStatus === "unavailable" && hasFutureTime
-        ? "Unavailable until scheduled time"
-        : effectiveStatus === "unavailable"
-          ? "Unavailable now"
-          : "Available now"
+      : hasAvailableFutureTime
+        ? "Unavailable until scheduled availability time"
+        : hasUnavailableFutureTime
+          ? "Available until scheduled unavailability time"
+          : effectiveStatus === "unavailable"
+            ? "Unavailable now"
+            : "Available now"
   };
 
   const updatedProfile = await WorkerProfile.findOneAndUpdate(

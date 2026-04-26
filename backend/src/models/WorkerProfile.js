@@ -71,6 +71,10 @@ const availabilitySchema = new mongoose.Schema(
       type: Date,
       default: null
     },
+    unavailableAt: {
+      type: Date,
+      default: null
+    },
     autoSwitch: {
       type: Boolean,
       default: false

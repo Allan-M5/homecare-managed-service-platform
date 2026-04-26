@@ -134,8 +134,10 @@ function formatWorkerAvailabilityLine(dashboard) {
     return date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
   };
 
-  const nextSwitchAt = availability?.nextSwitchAt || availability?.availableAt || "";
+  const nextSwitchAt = availability?.nextSwitchAt || availability?.availableAt || availability?.unavailableAt || "";
   const nextSwitchLabel = formatDateLabel(nextSwitchAt);
+  const availableAtLabel = formatDateLabel(availability?.availableAt || "");
+  const unavailableAtLabel = formatDateLabel(availability?.unavailableAt || "");
 
   if (availability?.repeatDaily) {
     const unavailableTime = formatClockLabel(availability?.unavailableFromTime) || availability?.unavailableFromTime || "-";
@@ -157,11 +159,13 @@ function formatWorkerAvailabilityLine(dashboard) {
   }
 
   if (status === "unavailable") {
-    return nextSwitchLabel ? `Unavailable until ${nextSwitchLabel}` : "Unavailable now";
+    return availableAtLabel || nextSwitchLabel ? `Unavailable until ${availableAtLabel || nextSwitchLabel}` : "Unavailable now";
   }
 
   if (status === "available") {
-    return nextSwitchLabel ? `Available from ${nextSwitchLabel}` : "Available now";
+    return unavailableAtLabel || availability?.unavailableAt
+      ? `Available until ${unavailableAtLabel || nextSwitchLabel}`
+      : "Available now";
   }
 
   return "Availability not set";
@@ -772,15 +776,15 @@ export default function WorkerDashboardPage() {
         };
       } else {
         if (!availabilityDateTime) {
-          setError("Please choose the future date and time when you want to become available again.");
+          setError("Please choose the future date and time when you want to become unavailable.");
           setIsSaving(false);
           return;
         }
 
         payload = {
-          status: "unavailable",
-          reason: "Temporarily unavailable until scheduled return time.",
-          availableAt: new Date(availabilityDateTime).toISOString()
+          status: "available",
+          reason: "Available until scheduled unavailability time.",
+          unavailableAt: new Date(availabilityDateTime).toISOString()
         };
       }
 
@@ -1690,7 +1694,7 @@ profilePhotoDisplay: {
 
             {availabilityMode === "scheduled" ? (
               <label className="field" style={{ display: "block", marginBottom: "12px" }}>
-                <span>{availabilityTarget === "available" ? "Become available on" : "Remain unavailable until"}</span>
+                <span>{availabilityTarget === "available" ? "Become available on" : "Become unavailable on"}</span>
                 <input
                   type="datetime-local"
                   value={availabilityDateTime}
