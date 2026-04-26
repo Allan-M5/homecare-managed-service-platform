@@ -445,38 +445,6 @@ export default function WorkerDashboardPage() {
     document.head.appendChild(style);
   }, []);
 
-  useEffect(() => {
-    const availability = dashboard?.profile?.availability || {};
-    const switchAt = availability?.nextSwitchAt || availability?.availableAt || "";
-
-    if (!switchAt) return undefined;
-
-    const switchTime = new Date(switchAt).getTime();
-    if (Number.isNaN(switchTime)) return undefined;
-
-    const refreshIfDue = () => {
-      const latestAvailability = dashboard?.profile?.availability || {};
-      const latestSwitchAt = latestAvailability?.nextSwitchAt || latestAvailability?.availableAt || "";
-      const latestSwitchTime = new Date(latestSwitchAt).getTime();
-
-      if (!Number.isNaN(latestSwitchTime) && latestSwitchTime <= Date.now()) {
-        console.info("Worker dashboard scheduled auto-switch refresh active");
-        loadDashboard();
-      }
-    };
-
-    const timeoutId = window.setTimeout(refreshIfDue, Math.max(1000, switchTime - Date.now() + 1500));
-    const intervalId = window.setInterval(refreshIfDue, 10000);
-
-    return () => {
-      window.clearTimeout(timeoutId);
-      window.clearInterval(intervalId);
-    };
-  }, [
-    dashboard?.profile?.availability?.nextSwitchAt,
-    dashboard?.profile?.availability?.availableAt
-  ]);
-
 
   const { handleAccountDeletion, logout, user, refreshCurrentUser } = useAuth();
 
