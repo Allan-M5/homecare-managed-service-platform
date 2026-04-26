@@ -797,6 +797,22 @@ function getExpectedCompletionAt(job = {}) {
   return null;
 }
 
+
+function isWorkerOnlineNow(worker = {}) {
+  const presenceSource = worker?.profile?.lastSeenAt || worker?.lastSeenAt || worker?.lastLoginAt || "";
+  if (!presenceSource) return false;
+
+  const seenAt = new Date(presenceSource).getTime();
+  if (Number.isNaN(seenAt)) return false;
+
+  return Date.now() - seenAt <= 2 * 60 * 1000;
+}
+
+function getWorkerAvailabilityState(worker = {}) {
+  const status = String(worker?.profile?.availability?.status || "").toLowerCase();
+  return ["available", "on", "online", "ready"].includes(status);
+}
+
 function getTimingIntelligence(job = {}) {
   const preferredStart = job?.preferredStartAt ? new Date(job.preferredStartAt) : null;
   const assignedAt = job?.assignedAt ? new Date(job.assignedAt) : null;
@@ -2536,7 +2552,7 @@ const submitApplicationReview = async (decision) => {
     ).length;
 
     const workersLive = workerDirectory.filter((worker) =>
-      ["available", "on", "online", "ready"].includes(String(worker?.profile?.availability?.status || "").toLowerCase())
+      isWorkerOnlineNow(worker)
     ).length;
 
     const clientsLive = clientDirectory.filter((client) =>
@@ -2628,7 +2644,7 @@ const submitApplicationReview = async (decision) => {
     const base = directoryFilter !== "live_workers"
       ? workerDirectory
       : workerDirectory.filter((worker) =>
-          ["available", "on", "online", "ready"].includes(String(worker?.profile?.availability?.status || "").toLowerCase())
+          isWorkerOnlineNow(worker)
         );
 
     return base.filter((worker) => itemMatchesSearch(worker, [
@@ -3817,7 +3833,8 @@ Please check your dashboard for the latest instructions.`
           const workerStatus = String(worker.currentAccountState || worker.accountStatus || "-").toLowerCase();
           const statusTone = workerStatus === "suspended" ? "#fca5a5" : workerStatus === "deleted" ? "#fda4af" : "#86efac";
           const workerAvailabilityStatus = String(worker?.profile?.availability?.status || "").toLowerCase();
-          const isWorkerCurrentlyAvailable = ["available", "on", "online", "ready"].includes(workerAvailabilityStatus);
+          const isWorkerCurrentlyAvailable = getWorkerAvailabilityState(worker);
+          const isWorkerCurrentlyOnline = isWorkerOnlineNow(worker);
           const workerAvailabilityLine = formatAvailabilityWindow(worker.profile);
           const workerSections = [
             ["Services Offered", Array.isArray(worker.profile?.serviceCategories) ? worker.profile.serviceCategories.map(formatServiceLabel).join(", ") : cleanText(worker.profile?.serviceCategories || "-"), "#93c5fd"],
@@ -3882,9 +3899,9 @@ Please check your dashboard for the latest instructions.`
                         borderRadius: "999px",
                         fontSize: "11px",
                         fontWeight: 900,
-                        color: isWorkerCurrentlyAvailable ? "#86efac" : "#fca5a5",
-                        background: isWorkerCurrentlyAvailable ? "rgba(34,197,94,0.12)" : "rgba(239,68,68,0.12)",
-                        border: isWorkerCurrentlyAvailable ? "1px solid rgba(34,197,94,0.28)" : "1px solid rgba(239,68,68,0.28)"
+                        color: isWorkerCurrentlyOnline ? "#86efac" : "#fca5a5",
+                        background: isWorkerCurrentlyOnline ? "rgba(34,197,94,0.12)" : "rgba(239,68,68,0.12)",
+                        border: isWorkerCurrentlyOnline ? "1px solid rgba(34,197,94,0.28)" : "1px solid rgba(239,68,68,0.28)"
                       }}
                     >
                       <span
@@ -3892,12 +3909,12 @@ Please check your dashboard for the latest instructions.`
                           width: "8px",
                           height: "8px",
                           borderRadius: "999px",
-                          background: isWorkerCurrentlyAvailable ? "#22c55e" : "#ef4444"
+                          background: isWorkerCurrentlyOnline ? "#22c55e" : "#ef4444"
                         }}
                       />
-                      {isWorkerCurrentlyAvailable ? "Online" : "Offline"}
+                      {isWorkerCurrentlyOnline ? "Online" : "Offline"}
                     </div>
-                  </div><div style={{ color: "#cbd5e1", marginTop: "6px" }}>Registered: {formatDateTime(worker.createdAt)}</div><div style={{ color: "#cbd5e1", marginTop: "6px" }}>Approved: {formatDateTime(worker.applicationSummary?.approvedAt)}</div><div style={{ color: "#cbd5e1", marginTop: "6px" }}>Last Login: {formatDateTime(worker.lastLoginAt)}</div></div></div><div
+                  </div><div style={{ color: "#cbd5e1", marginTop: "6px" }}>Registered: {formatDateTime(worker.createdAt)}</div><div style={{ color: "#cbd5e1", marginTop: "6px" }}>Approved: {formatDateTime(worker.applicationSummary?.approvedAt)}</div><div style={{ color: "#cbd5e1", marginTop: "6px" }}>Last Login: {formatDateTime(worker.lastLoginAt)}</div><div style={{ color: "#cbd5e1", marginTop: "6px" }}>Last Seen: {formatDateTime(worker.profile?.lastSeenAt || worker.lastSeenAt)}</div></div></div><div
                 style={{
                   marginTop: "12px",
                   display: "grid",
