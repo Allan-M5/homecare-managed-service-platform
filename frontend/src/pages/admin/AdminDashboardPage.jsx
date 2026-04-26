@@ -1558,6 +1558,14 @@ const resetModal = () => {
 
   useEffect(() => {
     load();
+
+    const intervalId = window.setInterval(() => {
+      load({ silent: true });
+    }, 10000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
   }, []);
 
   useEffect(() => {
